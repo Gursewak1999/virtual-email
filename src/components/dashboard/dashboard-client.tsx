@@ -140,7 +140,11 @@ const workspaceOptions = [
   },
 ] as const;
 
-const navTabs: Array<{ id: DashboardTab; title: string; icon: typeof InboxIcon }> = [
+const navTabs: Array<{
+  id: DashboardTab;
+  title: string;
+  icon: typeof InboxIcon;
+}> = [
   {
     id: "inboxes",
     title: "Inboxes",
@@ -186,7 +190,10 @@ function slugMailboxPart(value: string): string {
     .slice(0, 24);
 }
 
-function buildMailboxEmailFromIdentity(name: string, passportId: string): string {
+function buildMailboxEmailFromIdentity(
+  name: string,
+  passportId: string,
+): string {
   const namePart = slugMailboxPart(name) || "mailbox";
   const passportPart = slugMailboxPart(passportId) || "user";
   return `${namePart}.${passportPart}@${MAILBOX_EMAIL_DOMAIN}`;
@@ -250,8 +257,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
       (sum, mailbox) => sum + mailbox.sentCount,
       0,
     );
-    const activeMailboxes = mailboxes.filter((mailbox) => mailbox.isActive)
-      .length;
+    const activeMailboxes = mailboxes.filter(
+      (mailbox) => mailbox.isActive,
+    ).length;
 
     return {
       totalInbox,
@@ -570,7 +578,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
       }
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to create user mailbox",
+        error instanceof Error
+          ? error.message
+          : "Failed to create user mailbox",
       );
     } finally {
       setBusyAction(null);
@@ -645,7 +655,11 @@ export function DashboardClient({ user }: DashboardClientProps) {
   }
 
   async function handleReply(): Promise<void> {
-    if (!selectedMailbox || !selectedEmail || selectedEmail.kind !== "inbound") {
+    if (
+      !selectedMailbox ||
+      !selectedEmail ||
+      selectedEmail.kind !== "inbound"
+    ) {
       return;
     }
 
@@ -658,17 +672,20 @@ export function DashboardClient({ user }: DashboardClientProps) {
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`/api/mailboxes/${selectedMailbox.id}/reply`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
+      const response = await fetch(
+        `/api/mailboxes/${selectedMailbox.id}/reply`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            inboundEmailId: selectedEmail.id,
+            textBody: replyBody,
+            replyAll,
+          }),
         },
-        body: JSON.stringify({
-          inboundEmailId: selectedEmail.id,
-          textBody: replyBody,
-          replyAll,
-        }),
-      });
+      );
 
       const payload = (await response.json()) as {
         ok: boolean;
@@ -717,7 +734,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                   }
                 >
                   <div className="grid flex-1 text-left leading-tight">
-                    <span className="text-sm font-semibold">{activeWorkspaceInfo.title}</span>
+                    <span className="text-sm font-semibold">
+                      {activeWorkspaceInfo.title}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {user.email || activeWorkspaceInfo.description}
                     </span>
@@ -733,7 +752,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       onClick={() => setActiveWorkspace(workspace.id)}
                     >
                       <div className="grid leading-tight">
-                        <span className="text-sm font-medium">{workspace.title}</span>
+                        <span className="text-sm font-medium">
+                          {workspace.title}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                           {workspace.description}
                         </span>
@@ -804,7 +825,13 @@ export function DashboardClient({ user }: DashboardClientProps) {
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button size="icon-sm" variant="outline" className="relative" />}
+                render={
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    className="relative"
+                  />
+                }
               >
                 <BellIcon />
                 {totalUnread > 0 ? (
@@ -856,17 +883,25 @@ export function DashboardClient({ user }: DashboardClientProps) {
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>
                   <div className="grid leading-tight">
-                    <span className="text-sm font-medium">{user.name || "Operator"}</span>
+                    <span className="text-sm font-medium">
+                      {user.name || "Operator"}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {user.email || "No email"}
                     </span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setActiveTab("users")}>Manage Users</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveTab("settings")}>Workspace Settings</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("users")}>
+                  Manage Users
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveTab("settings")}>
+                  Workspace Settings
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/auth" })}>
+                <DropdownMenuItem
+                  onClick={() => signOut({ callbackUrl: "/auth" })}
+                >
                   <LogOutIcon />
                   Sign Out
                 </DropdownMenuItem>
@@ -893,10 +928,20 @@ export function DashboardClient({ user }: DashboardClientProps) {
                     <Button
                       size="icon-sm"
                       variant="ghost"
-                      onClick={() => setInboxesCollapsed((previous) => !previous)}
-                      aria-label={inboxesCollapsed ? "Expand inbox sidebar" : "Collapse inbox sidebar"}
+                      onClick={() =>
+                        setInboxesCollapsed((previous) => !previous)
+                      }
+                      aria-label={
+                        inboxesCollapsed
+                          ? "Expand inbox sidebar"
+                          : "Collapse inbox sidebar"
+                      }
                     >
-                      {inboxesCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                      {inboxesCollapsed ? (
+                        <ChevronRightIcon />
+                      ) : (
+                        <ChevronLeftIcon />
+                      )}
                     </Button>
 
                     {inboxesCollapsed ? (
@@ -905,7 +950,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       </span>
                     ) : (
                       <>
-                        <h2 className="font-heading text-base font-semibold">Inboxes</h2>
+                        <h2 className="font-heading text-base font-semibold">
+                          Inboxes
+                        </h2>
                         <Badge variant="secondary" className="ml-auto">
                           {filteredMailboxes.length}
                         </Badge>
@@ -918,7 +965,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
                       <Input
                         value={inboxSidebarSearch}
-                        onChange={(event) => setInboxSidebarSearch(event.target.value)}
+                        onChange={(event) =>
+                          setInboxSidebarSearch(event.target.value)
+                        }
                         className="h-8 border-sidebar-border bg-sidebar-accent/50 pl-9"
                         placeholder="Search inboxes"
                       />
@@ -928,7 +977,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
 
                 <SidebarContent className="max-h-[calc(100vh-14rem)] p-2">
                   {loadingMailboxes ? (
-                    <p className="px-2 py-2 text-sm text-sidebar-foreground/70">Loading inboxes...</p>
+                    <p className="px-2 py-2 text-sm text-sidebar-foreground/70">
+                      Loading inboxes...
+                    </p>
                   ) : filteredMailboxes.length === 0 ? (
                     <p className="rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/30 px-3 py-3 text-sm text-sidebar-foreground/70">
                       No inboxes match your search.
@@ -961,7 +1012,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                                 >
                                   {inboxesCollapsed ? (
                                     <span className="text-xs font-semibold uppercase">
-                                      {(mailbox.label || mailbox.emailAddress).slice(0, 1)}
+                                      {(
+                                        mailbox.label || mailbox.emailAddress
+                                      ).slice(0, 1)}
                                     </span>
                                   ) : (
                                     <div className="w-full space-y-0.5">
@@ -974,10 +1027,13 @@ export function DashboardClient({ user }: DashboardClientProps) {
                                             {mailbox.emailAddress}
                                           </p>
                                         </div>
-                                        <Badge variant="outline">{mailbox.inboxCount}</Badge>
+                                        <Badge variant="outline">
+                                          {mailbox.inboxCount}
+                                        </Badge>
                                       </div>
                                       <p className="text-[11px] text-sidebar-foreground/65">
-                                        UID: {mailbox.passportId} · {mailbox.id.slice(0, 8)}
+                                        UID: {mailbox.passportId} ·{" "}
+                                        {mailbox.id.slice(0, 8)}
                                       </p>
                                     </div>
                                   )}
@@ -998,10 +1054,20 @@ export function DashboardClient({ user }: DashboardClientProps) {
                     <Button
                       size="icon-sm"
                       variant="ghost"
-                      onClick={() => setMessagesCollapsed((previous) => !previous)}
-                      aria-label={messagesCollapsed ? "Expand messages sidebar" : "Collapse messages sidebar"}
+                      onClick={() =>
+                        setMessagesCollapsed((previous) => !previous)
+                      }
+                      aria-label={
+                        messagesCollapsed
+                          ? "Expand messages sidebar"
+                          : "Collapse messages sidebar"
+                      }
                     >
-                      {messagesCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                      {messagesCollapsed ? (
+                        <ChevronRightIcon />
+                      ) : (
+                        <ChevronLeftIcon />
+                      )}
                     </Button>
 
                     {messagesCollapsed ? (
@@ -1056,7 +1122,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
                       <Input
                         value={messagesSidebarSearch}
-                        onChange={(event) => setMessagesSidebarSearch(event.target.value)}
+                        onChange={(event) =>
+                          setMessagesSidebarSearch(event.target.value)
+                        }
                         className="h-8 border-sidebar-border bg-sidebar-accent/50 pl-9"
                         placeholder="Search messages"
                       />
@@ -1070,7 +1138,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       Choose an inbox from the sidebar to load messages.
                     </p>
                   ) : loadingEmails ? (
-                    <p className="px-2 py-2 text-sm text-sidebar-foreground/70">Loading messages...</p>
+                    <p className="px-2 py-2 text-sm text-sidebar-foreground/70">
+                      Loading messages...
+                    </p>
                   ) : filteredEmails.length === 0 ? (
                     <p className="rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/30 px-3 py-3 text-sm text-sidebar-foreground/70">
                       No messages for this view.
@@ -1086,7 +1156,11 @@ export function DashboardClient({ user }: DashboardClientProps) {
                               <SidebarMenuItem key={email.id}>
                                 <SidebarMenuButton
                                   isActive={active}
-                                  tooltip={messagesCollapsed ? email.subject : undefined}
+                                  tooltip={
+                                    messagesCollapsed
+                                      ? email.subject
+                                      : undefined
+                                  }
                                   className={
                                     messagesCollapsed
                                       ? "justify-center px-0"
@@ -1100,8 +1174,12 @@ export function DashboardClient({ user }: DashboardClientProps) {
                                     </span>
                                   ) : (
                                     <div className="w-full space-y-0.5">
-                                      <p className="truncate text-sm font-semibold">{email.subject}</p>
-                                      <p className="truncate text-xs text-sidebar-foreground/70">{email.from}</p>
+                                      <p className="truncate text-sm font-semibold">
+                                        {email.subject}
+                                      </p>
+                                      <p className="truncate text-xs text-sidebar-foreground/70">
+                                        {email.from}
+                                      </p>
                                       <p className="text-xs text-sidebar-foreground/65">
                                         {buildSnippet(email.preview, 88)}
                                       </p>
@@ -1123,9 +1201,12 @@ export function DashboardClient({ user }: DashboardClientProps) {
 
               <section className="vibe-shell overflow-hidden rounded-2xl">
                 <div className="border-b px-4 py-3">
-                  <h3 className="text-base font-semibold text-zinc-900">Email Preview</h3>
+                  <h3 className="text-base font-semibold text-zinc-900">
+                    Email Preview
+                  </h3>
                   <p className="text-xs text-zinc-600">
-                    Opened messages are shown in-place without leaving the dashboard.
+                    Opened messages are shown in-place without leaving the
+                    dashboard.
                   </p>
                 </div>
 
@@ -1133,13 +1214,23 @@ export function DashboardClient({ user }: DashboardClientProps) {
                   {selectedEmail ? (
                     <>
                       <div className="space-y-1 rounded-xl border border-zinc-200 bg-white/80 p-3">
-                        <p className="text-lg font-semibold text-zinc-900">{selectedEmail.subject}</p>
-                        <p className="text-sm text-zinc-600">From: {selectedEmail.from}</p>
-                        <p className="text-sm text-zinc-600">To: {selectedEmail.to.join(", ")}</p>
+                        <p className="text-lg font-semibold text-zinc-900">
+                          {selectedEmail.subject}
+                        </p>
+                        <p className="text-sm text-zinc-600">
+                          From: {selectedEmail.from}
+                        </p>
+                        <p className="text-sm text-zinc-600">
+                          To: {selectedEmail.to.join(", ")}
+                        </p>
                         {selectedEmail.cc.length > 0 ? (
-                          <p className="text-xs text-zinc-500">CC: {selectedEmail.cc.join(", ")}</p>
+                          <p className="text-xs text-zinc-500">
+                            CC: {selectedEmail.cc.join(", ")}
+                          </p>
                         ) : null}
-                        <p className="text-xs text-zinc-500">{formatTimestamp(selectedEmail.createdAt)}</p>
+                        <p className="text-xs text-zinc-500">
+                          {formatTimestamp(selectedEmail.createdAt)}
+                        </p>
                       </div>
 
                       {selectedEmail.attachments.length > 0 ? (
@@ -1154,7 +1245,8 @@ export function DashboardClient({ user }: DashboardClientProps) {
                                 className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs"
                               >
                                 <span>
-                                  {attachment.filename || "attachment"} ({formatBytes(attachment.sizeBytes)})
+                                  {attachment.filename || "attachment"} (
+                                  {formatBytes(attachment.sizeBytes)})
                                 </span>
                                 {attachment.hasDownload ? (
                                   <a
@@ -1198,13 +1290,17 @@ export function DashboardClient({ user }: DashboardClientProps) {
                             className="min-h-24 w-full rounded-xl border border-input/90 bg-white px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35"
                             placeholder="Write your reply"
                             value={replyBody}
-                            onChange={(event) => setReplyBody(event.target.value)}
+                            onChange={(event) =>
+                              setReplyBody(event.target.value)
+                            }
                           />
                           <label className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
                             <input
                               type="checkbox"
                               checked={replyAll}
-                              onChange={(event) => setReplyAll(event.target.checked)}
+                              onChange={(event) =>
+                                setReplyAll(event.target.checked)
+                              }
                             />
                             Reply all recipients
                           </label>
@@ -1212,9 +1308,13 @@ export function DashboardClient({ user }: DashboardClientProps) {
                             className="mt-2"
                             size="sm"
                             onClick={() => void handleReply()}
-                            disabled={busyAction === "reply" || !replyBody.trim()}
+                            disabled={
+                              busyAction === "reply" || !replyBody.trim()
+                            }
                           >
-                            {busyAction === "reply" ? "Sending Reply..." : "Send Reply"}
+                            {busyAction === "reply"
+                              ? "Sending Reply..."
+                              : "Send Reply"}
                           </Button>
                         </div>
                       ) : null}
@@ -1237,7 +1337,8 @@ export function DashboardClient({ user }: DashboardClientProps) {
                     <div>
                       <CardTitle>Users Directory</CardTitle>
                       <CardDescription>
-                        Mailboxes are treated as users. Filter, paginate, and manage user mailboxes.
+                        Mailboxes are treated as users. Filter, paginate, and
+                        manage user mailboxes.
                       </CardDescription>
                     </div>
 
@@ -1252,7 +1353,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         value={usersSearchQuery}
-                        onChange={(event) => setUsersSearchQuery(event.target.value)}
+                        onChange={(event) =>
+                          setUsersSearchQuery(event.target.value)
+                        }
                         className="pl-9"
                         placeholder="Search by name, passport ID, email, or user ID"
                       />
@@ -1261,21 +1364,29 @@ export function DashboardClient({ user }: DashboardClientProps) {
                     <div className="flex items-center gap-1">
                       <Button
                         size="sm"
-                        variant={usersStatusFilter === "all" ? "default" : "outline"}
+                        variant={
+                          usersStatusFilter === "all" ? "default" : "outline"
+                        }
                         onClick={() => setUsersStatusFilter("all")}
                       >
                         All
                       </Button>
                       <Button
                         size="sm"
-                        variant={usersStatusFilter === "active" ? "default" : "outline"}
+                        variant={
+                          usersStatusFilter === "active" ? "default" : "outline"
+                        }
                         onClick={() => setUsersStatusFilter("active")}
                       >
                         Active
                       </Button>
                       <Button
                         size="sm"
-                        variant={usersStatusFilter === "inactive" ? "default" : "outline"}
+                        variant={
+                          usersStatusFilter === "inactive"
+                            ? "default"
+                            : "outline"
+                        }
                         onClick={() => setUsersStatusFilter("inactive")}
                       >
                         Inactive
@@ -1286,7 +1397,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       <input
                         type="checkbox"
                         checked={usersUnreadOnly}
-                        onChange={(event) => setUsersUnreadOnly(event.target.checked)}
+                        onChange={(event) =>
+                          setUsersUnreadOnly(event.target.checked)
+                        }
                       />
                       Unread only
                     </label>
@@ -1309,13 +1422,19 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       <TableBody>
                         {loadingMailboxes ? (
                           <TableRow>
-                            <TableCell colSpan={8} className="h-16 text-center text-zinc-600">
+                            <TableCell
+                              colSpan={8}
+                              className="h-16 text-center text-zinc-600"
+                            >
                               Loading users...
                             </TableCell>
                           </TableRow>
                         ) : paginatedUsers.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={8} className="h-16 text-center text-zinc-600">
+                            <TableCell
+                              colSpan={8}
+                              className="h-16 text-center text-zinc-600"
+                            >
                               No users match your filters.
                             </TableCell>
                           </TableRow>
@@ -1323,27 +1442,38 @@ export function DashboardClient({ user }: DashboardClientProps) {
                           paginatedUsers.map((mailbox) => (
                             <TableRow key={mailbox.id}>
                               <TableCell className="max-w-[220px] truncate font-medium">
-                                {mailbox.label || mailbox.emailAddress.split("@")[0]}
+                                {mailbox.label ||
+                                  mailbox.emailAddress.split("@")[0]}
                               </TableCell>
                               <TableCell>{mailbox.passportId}</TableCell>
                               <TableCell className="max-w-[240px] truncate">
                                 {mailbox.emailAddress}
                               </TableCell>
                               <TableCell>
-                                <Badge variant={mailbox.isActive ? "default" : "outline"}>
+                                <Badge
+                                  variant={
+                                    mailbox.isActive ? "default" : "outline"
+                                  }
+                                >
                                   {mailbox.isActive ? "Active" : "Inactive"}
                                 </Badge>
                               </TableCell>
                               <TableCell>{mailbox.inboxCount}</TableCell>
                               <TableCell>{mailbox.sentCount}</TableCell>
-                              <TableCell>{formatTimestamp(mailbox.createdAt)}</TableCell>
+                              <TableCell>
+                                {formatTimestamp(mailbox.createdAt)}
+                              </TableCell>
                               <TableCell>
                                 <div className="flex justify-end gap-2">
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleCopyPassword(mailbox.id)}
-                                    disabled={busyAction === `reveal-${mailbox.id}`}
+                                    onClick={() =>
+                                      handleCopyPassword(mailbox.id)
+                                    }
+                                    disabled={
+                                      busyAction === `reveal-${mailbox.id}`
+                                    }
                                   >
                                     <CopyIcon />
                                     Copy Password
@@ -1351,8 +1481,12 @@ export function DashboardClient({ user }: DashboardClientProps) {
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    onClick={() => void handleDeleteMailbox(mailbox)}
-                                    disabled={busyAction === `delete-${mailbox.id}`}
+                                    onClick={() =>
+                                      void handleDeleteMailbox(mailbox)
+                                    }
+                                    disabled={
+                                      busyAction === `delete-${mailbox.id}`
+                                    }
                                   >
                                     <Trash2Icon />
                                     Delete
@@ -1373,7 +1507,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                         ? 0
                         : (usersPage - 1) * USERS_PAGE_SIZE + 1}
                       -
-                      {(usersPage - 1) * USERS_PAGE_SIZE + paginatedUsers.length} of {filteredUsers.length}
+                      {(usersPage - 1) * USERS_PAGE_SIZE +
+                        paginatedUsers.length}{" "}
+                      of {filteredUsers.length}
                     </span>
 
                     <div className="flex items-center gap-2">
@@ -1407,19 +1543,28 @@ export function DashboardClient({ user }: DashboardClientProps) {
                 </CardContent>
               </Card>
 
-              <Sheet open={createUserSheetOpen} onOpenChange={setCreateUserSheetOpen}>
+              <Sheet
+                open={createUserSheetOpen}
+                onOpenChange={setCreateUserSheetOpen}
+              >
                 <SheetContent side="left" className="w-full sm:max-w-md">
-                  <form className="flex h-full flex-col" onSubmit={handleCreateUserSubmit}>
+                  <form
+                    className="flex h-full flex-col"
+                    onSubmit={handleCreateUserSubmit}
+                  >
                     <SheetHeader>
                       <SheetTitle>Create New User</SheetTitle>
                       <SheetDescription>
-                        Create a mailbox-user using name and passport ID. The email is generated automatically.
+                        Create a mailbox-user using name and passport ID. The
+                        email is generated automatically.
                       </SheetDescription>
                     </SheetHeader>
 
                     <div className="space-y-3 px-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="create-user-name">Nickname / Name</Label>
+                        <Label htmlFor="create-user-name">
+                          Nickname / Name
+                        </Label>
                         <Input
                           id="create-user-name"
                           value={createUserForm.name}
@@ -1435,7 +1580,9 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="create-user-passport">Passport ID</Label>
+                        <Label htmlFor="create-user-passport">
+                          Passport ID
+                        </Label>
                         <Input
                           id="create-user-passport"
                           value={createUserForm.passportId}
@@ -1451,16 +1598,21 @@ export function DashboardClient({ user }: DashboardClientProps) {
                       </div>
 
                       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
-                        Generated mailbox: {generatedMailboxEmail || "Fill name and passport ID"}
+                        Generated mailbox:{" "}
+                        {generatedMailboxEmail || "Fill name and passport ID"}
                       </div>
                     </div>
 
                     <SheetFooter>
                       <Button
                         type="submit"
-                        disabled={busyAction === "create-user" || !generatedMailboxEmail}
+                        disabled={
+                          busyAction === "create-user" || !generatedMailboxEmail
+                        }
                       >
-                        {busyAction === "create-user" ? "Creating..." : "Create User"}
+                        {busyAction === "create-user"
+                          ? "Creating..."
+                          : "Create User"}
                       </Button>
                       <Button
                         type="button"
@@ -1504,8 +1656,12 @@ export function DashboardClient({ user }: DashboardClientProps) {
                             <CheckCheckIcon className="size-3.5" />
                           </span>
                           <div>
-                            <p className="text-sm font-semibold text-zinc-900">{event.label}</p>
-                            <p className="text-xs text-zinc-500">{event.timestamp}</p>
+                            <p className="text-sm font-semibold text-zinc-900">
+                              {event.label}
+                            </p>
+                            <p className="text-xs text-zinc-500">
+                              {event.timestamp}
+                            </p>
                           </div>
                         </div>
                       ))
@@ -1523,19 +1679,25 @@ export function DashboardClient({ user }: DashboardClientProps) {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-zinc-700">
                   <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Active Mailboxes</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+                      Active Mailboxes
+                    </p>
                     <p className="mt-1 text-2xl font-semibold text-zinc-900">
                       {dashboardMetrics.activeMailboxes}
                     </p>
                   </div>
                   <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Inbound Queue</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+                      Inbound Queue
+                    </p>
                     <p className="mt-1 text-2xl font-semibold text-zinc-900">
                       {dashboardMetrics.totalInbox}
                     </p>
                   </div>
                   <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">Sent Throughput</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+                      Sent Throughput
+                    </p>
                     <p className="mt-1 text-2xl font-semibold text-zinc-900">
                       {dashboardMetrics.totalSent}
                     </p>
@@ -1551,7 +1713,8 @@ export function DashboardClient({ user }: DashboardClientProps) {
                 <CardHeader>
                   <CardTitle>Workspace Settings</CardTitle>
                   <CardDescription>
-                    Configure default behavior for notifications and inbox workflow.
+                    Configure default behavior for notifications and inbox
+                    workflow.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-zinc-700">
@@ -1579,11 +1742,20 @@ export function DashboardClient({ user }: DashboardClientProps) {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-                    <p className="text-sm font-semibold text-zinc-900">{user.name || "Operator"}</p>
-                    <p className="text-xs text-zinc-600">{user.email || "No email"}</p>
+                    <p className="text-sm font-semibold text-zinc-900">
+                      {user.name || "Operator"}
+                    </p>
+                    <p className="text-xs text-zinc-600">
+                      {user.email || "No email"}
+                    </p>
                   </div>
 
-                  <Button variant="outline" onClick={() => setActiveTab("users")}>Manage Inboxes</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab("users")}
+                  >
+                    Manage Inboxes
+                  </Button>
                   <Button
                     variant="destructive"
                     onClick={() => signOut({ callbackUrl: "/auth" })}
@@ -1601,7 +1773,8 @@ export function DashboardClient({ user }: DashboardClientProps) {
           <div className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center justify-between gap-2">
             <span>{statusMessage}</span>
             <span>
-              Active inbox: {selectedMailbox?.emailAddress || "none"} · Folder: {folder.toUpperCase()} · Unread: {totalUnread}
+              Active inbox: {selectedMailbox?.emailAddress || "none"} · Folder:{" "}
+              {folder.toUpperCase()} · Unread: {totalUnread}
             </span>
           </div>
         </footer>

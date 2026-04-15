@@ -63,7 +63,10 @@ export default async function Home() {
     });
 
     const mailboxByAddress = new Map(
-      ownedMailboxes.map((mailbox) => [mailbox.emailAddress.toLowerCase(), mailbox]),
+      ownedMailboxes.map((mailbox) => [
+        mailbox.emailAddress.toLowerCase(),
+        mailbox,
+      ]),
     );
 
     if (ownedMailboxes.length > 0) {
@@ -275,11 +278,13 @@ export default async function Home() {
 
           {!sessionUser ? (
             <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-              Sign in to see your latest inbound emails from all virtual inboxes.
+              Sign in to see your latest inbound emails from all virtual
+              inboxes.
             </p>
           ) : recentEmails.length === 0 ? (
             <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-              No inbound emails yet. Create a mailbox and messages will appear here.
+              No inbound emails yet. Create a mailbox and messages will appear
+              here.
             </p>
           ) : (
             <div className="space-y-2">
@@ -300,7 +305,8 @@ export default async function Home() {
 
                   <p className="text-xs text-zinc-600">From: {email.from}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    Inbox: {email.mailboxDisplay} · UID: {email.mailboxPassportId}
+                    Inbox: {email.mailboxDisplay} · UID:{" "}
+                    {email.mailboxPassportId}
                   </p>
                   <p className="mt-1 text-sm text-zinc-700">{email.preview}</p>
                 </article>
