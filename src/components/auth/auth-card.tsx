@@ -100,19 +100,56 @@ export function AuthCard() {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-md border-black/10 bg-white/90 backdrop-blur">
-      <CardHeader>
+    <Card className="mx-auto w-full max-w-md rounded-3xl border shadow-sm">
+      <CardHeader className="border-b pb-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="rounded-full border bg-muted px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Secure Access
+          </p>
+
+          <div className="grid grid-cols-2 rounded-full border bg-muted/60 p-1 text-xs font-semibold text-muted-foreground">
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1.5 transition ${
+                mode === "login"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "hover:bg-background/80"
+              }`}
+              onClick={() => {
+                setMode("login");
+                setError(null);
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1.5 transition ${
+                mode === "signup"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "hover:bg-background/80"
+              }`}
+              onClick={() => {
+                setMode("signup");
+                setError(null);
+              }}
+            >
+              Create
+            </button>
+          </div>
+        </div>
+
         <CardTitle className="text-2xl">
-          {mode === "login" ? "Sign In" : "Create Account"}
+          {mode === "login" ? "Welcome back" : "Create your operator account"}
         </CardTitle>
         <CardDescription>
           {mode === "login"
-            ? "Authenticate to access your virtual mailbox dashboard."
-            : "Create an account to manage virtual mailbox credentials and inboxes."}
+            ? "Authenticate to enter your mailbox operations workspace."
+            : "Register now to start managing secure virtual mailbox identities."}
         </CardDescription>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="pt-5">
         <form className="space-y-4" onSubmit={onSubmit}>
           {mode === "signup" ? (
             <div className="space-y-2">
@@ -173,21 +210,10 @@ export function AuthCard() {
         </form>
       </CardContent>
 
-      <CardFooter className="justify-between">
-        <span className="text-sm text-muted-foreground">
-          {mode === "login" ? "Need an account?" : "Already have an account?"}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setMode(mode === "login" ? "signup" : "login");
-            setError(null);
-          }}
-        >
-          {mode === "login" ? "Sign up" : "Sign in"}
-        </Button>
+      <CardFooter className="justify-center border-t bg-muted/40 text-center text-xs text-muted-foreground">
+        {mode === "login"
+          ? "Use your existing operator credentials to continue."
+          : "Your account will sign in automatically after successful registration."}
       </CardFooter>
     </Card>
   );

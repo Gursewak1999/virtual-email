@@ -1,0 +1,110 @@
+[
+    {
+        "id": 1,
+        "header": "Study Permit Intake",
+        "type": "Inbound webhook",
+        "status": "Running",
+        "target": "< 15 min",
+        "limit": "260/day",
+        "reviewer": "Ops Team A"
+    },
+    {
+        "id": 2,
+        "header": "PGWP Follow-up Responses",
+        "type": "Outbound batch",
+        "status": "Queued",
+        "target": "< 2 hrs",
+        "limit": "180/day",
+        "reviewer": "Ops Team B"
+    },
+    {
+        "id": 3,
+        "header": "Priority Sender Escalations",
+        "type": "Rules engine",
+        "status": "Blocked",
+        "target": "< 20 min",
+        "limit": "40/day",
+        "reviewer": "Escalation Desk"
+    },
+    {
+        "id": 4,
+        "header": "Biometric Reminder Cycle",
+        "type": "Outbound automation",
+        "status": "Running",
+        "target": "< 4 hrs",
+        "limit": "320/day",
+        "reviewer": "Automation Queue"
+    },
+    {
+        "id": 5,
+        "header": "Document Deficiency Notices",
+        "type": "Template dispatch",
+        "status": "Queued",
+        "target": "< 90 min",
+        "limit": "110/day",
+        "reviewer": "Case Services"
+    },
+    {
+        "id": 6,
+        "header": "Address Verification Replies",
+        "type": "Manual triage",
+        "status": "Running",
+        "target": "< 3 hrs",
+        "limit": "95/day",
+        "reviewer": "Client Response Desk"
+    },
+    {
+        "id": 7,
+        "header": "Attachment Malware Scan Queue",
+        "type": "Security pipeline",
+        "status": "Done",
+        "target": "< 10 min",
+        "limit": "900/day",
+        "reviewer": "Security Ops"
+    },
+    {
+        "id": 8,
+        "header": "Case Ownership Reassignment",
+        "type": "Workflow sync",
+        "status": "Queued",
+        "target": "< 30 min",
+        "limit": "65/day",
+        "reviewer": "Queue Coordinator"
+    },
+    {
+        "id": 9,
+        "header": "French Language Routing",
+        "type": "Language classifier",
+        "status": "Running",
+        "target": "< 18 min",
+        "limit": "140/day",
+        "reviewer": "Bilingual Desk"
+    },
+    {
+        "id": 10,
+        "header": "Payment Confirmation Receipts",
+        "type": "Outbound transactional",
+        "status": "Done",
+        "target": "< 5 min",
+        "limit": "500/day",
+        "reviewer": "Finance Ops"
+    },
+    {
+        "id": 11,
+        "header": "Medical Update Inbound",
+        "type": "Inbound webhook",
+        "status": "Queued",
+        "target": "< 45 min",
+        "limit": "120/day",
+        "reviewer": "Health Review Desk"
+    },
+    {
+        "id": 12,
+        "header": "Dormant Thread Cleanup",
+        "type": "Maintenance job",
+        "status": "Blocked",
+        "target": "< 1 day",
+        "limit": "2,000/day",
+        "reviewer": "Platform Reliability"
+    }
+]
