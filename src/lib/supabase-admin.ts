@@ -16,6 +16,12 @@ export function getSupabaseAdminClient(): SupabaseClient {
     throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable.");
   }
 
+  if (serviceRoleKey.startsWith("sb_publishable_")) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is set to a publishable key. Use the service_role secret key for server-side storage operations.",
+    );
+  }
+
   if (!globalForSupabase.supabaseAdmin) {
     globalForSupabase.supabaseAdmin = createClient(
       supabaseUrl,

@@ -6,6 +6,63 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id           String           @id @default(cuid())
+  name         String?
+  email        String           @unique
+  passwordHash String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  mailboxes    VirtualMailbox[]
+  sentEmails   SentEmail[]
+
+  @@index([email])
+}
+
+model VirtualMailbox {
+  id                 String      @id @default(cuid())
+  ownerId            String
+  owner              User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  passportId         String
+  emailAddress       String      @unique
+  label              String?
+  passwordCiphertext String
+  passwordIv         String
+  passwordTag        String
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  sentEmails         SentEmail[]
+
+  @@unique([ownerId, passportId])
+  @@index([ownerId])
+  @@index([emailAddress])
+}
+
+model SentEmail {
+  id                    String          @id @default(cuid())
+  ownerId               String
+  owner                 User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  mailboxId             String
+  mailbox               VirtualMailbox  @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  resendEmailId         String?
+  toAddresses           String[]
+  ccAddresses           String[]
+  bccAddresses          String[]
+  subject               String?
+  textBody              String?
+  htmlBody              String?
+  status                String          @default("queued")
+  replyToInboundEmailId String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([ownerId, createdAt])
+  @@index([mailboxId, createdAt])
+}
+
 model InboundEmail {
   id                    String                   @id @default(cuid())
   resendEmailId         String                   @unique
