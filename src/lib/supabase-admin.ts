@@ -17,12 +17,16 @@ export function getSupabaseAdminClient(): SupabaseClient {
   }
 
   if (!globalForSupabase.supabaseAdmin) {
-    globalForSupabase.supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+    globalForSupabase.supabaseAdmin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
       },
-    });
+    );
   }
 
   return globalForSupabase.supabaseAdmin;

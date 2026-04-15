@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 
 import { Prisma } from "@prisma/client";
-import type { AttachmentData, EmailReceivedEvent, GetReceivingEmailResponseSuccess } from "resend";
+import type {
+  AttachmentData,
+  EmailReceivedEvent,
+  GetReceivingEmailResponseSuccess,
+} from "resend";
 
 import { prisma } from "@/lib/prisma";
 import { getResendClient } from "@/lib/resend";
@@ -139,7 +143,9 @@ function parseMailbox(raw: string): ParsedMailbox {
   };
 }
 
-function parseMailboxList(values: string[] | null | undefined): ParsedMailbox[] {
+function parseMailboxList(
+  values: string[] | null | undefined,
+): ParsedMailbox[] {
   if (!values || values.length === 0) {
     return [];
   }
@@ -148,7 +154,9 @@ function parseMailboxList(values: string[] | null | undefined): ParsedMailbox[] 
 }
 
 function collectAddresses(values: ParsedMailbox[]): string[] {
-  return values.map((item) => item.address).filter((item): item is string => Boolean(item));
+  return values
+    .map((item) => item.address)
+    .filter((item): item is string => Boolean(item));
 }
 
 function shouldIngestForDomain(addresses: string[]): boolean {
@@ -157,7 +165,9 @@ function shouldIngestForDomain(addresses: string[]): boolean {
     return true;
   }
 
-  return addresses.some((address) => address.toLowerCase().endsWith(`@${inboundDomain}`));
+  return addresses.some((address) =>
+    address.toLowerCase().endsWith(`@${inboundDomain}`),
+  );
 }
 
 function sanitizeFileName(fileName: string | null, fallbackId: string): string {
@@ -169,7 +179,10 @@ function sanitizeFileName(fileName: string | null, fallbackId: string): string {
 }
 
 function getAttachmentBucket(): string {
-  return process.env.SUPABASE_EMAIL_ATTACHMENTS_BUCKET?.trim() || DEFAULT_ATTACHMENT_BUCKET;
+  return (
+    process.env.SUPABASE_EMAIL_ATTACHMENTS_BUCKET?.trim() ||
+    DEFAULT_ATTACHMENT_BUCKET
+  );
 }
 
 function isAttachmentBucketPublic(): boolean {
@@ -178,7 +191,9 @@ function isAttachmentBucketPublic(): boolean {
 
 function isBucketMissing(message: string): boolean {
   const normalized = message.toLowerCase();
-  return normalized.includes("not found") || normalized.includes("does not exist");
+  return (
+    normalized.includes("not found") || normalized.includes("does not exist")
+  );
 }
 
 function isBucketAlreadyExists(message: string): boolean {
@@ -195,16 +210,23 @@ async function ensureAttachmentBucket(bucketName: string): Promise<void> {
     const { data, error } = await supabase.storage.getBucket(bucketName);
 
     if (error && !isBucketMissing(error.message)) {
-      throw new Error(`Failed to read Supabase bucket ${bucketName}: ${error.message}`);
+      throw new Error(
+        `Failed to read Supabase bucket ${bucketName}: ${error.message}`,
+      );
     }
 
     if (!data) {
-      const { error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: isAttachmentBucketPublic(),
-      });
+      const { error: createError } = await supabase.storage.createBucket(
+        bucketName,
+        {
+          public: isAttachmentBucketPublic(),
+        },
+      );
 
       if (createError && !isBucketAlreadyExists(createError.message)) {
-        throw new Error(`Failed to create Supabase bucket ${bucketName}: ${createError.message}`);
+        throw new Error(
+          `Failed to create Supabase bucket ${bucketName}: ${createError.message}`,
+        );
       }
     }
   })().catch((error) => {
@@ -215,7 +237,9 @@ async function ensureAttachmentBucket(bucketName: string): Promise<void> {
   return attachmentBucketReadyPromise;
 }
 
-function normalizeAttachmentsFromWebhook(event: EmailReceivedEvent | undefined): NormalizedAttachment[] {
+function normalizeAttachmentsFromWebhook(
+  event: EmailReceivedEvent | undefined,
+): NormalizedAttachment[] {
   if (!event) {
     return [];
   }
@@ -298,13 +322,17 @@ async function uploadAttachmentToSupabase(
   const storagePath = `${datePrefix}/${resendEmailId}/${attachment.id}-${safeFileName}`;
 
   const supabase = getSupabaseAdminClient();
-  const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, bytes, {
-    contentType: attachment.contentType ?? "application/octet-stream",
-    upsert: true,
-  });
+  const { error: uploadError } = await supabase.storage
+    .from(bucketName)
+    .upload(storagePath, bytes, {
+      contentType: attachment.contentType ?? "application/octet-stream",
+      upsert: true,
+    });
 
   if (uploadError) {
-    throw new Error(`Failed to upload attachment ${attachment.id} to Supabase: ${uploadError.message}`);
+    throw new Error(
+      `Failed to upload attachment ${attachment.id} to Supabase: ${uploadError.message}`,
+    );
   }
 
   const publicUrl = isAttachmentBucketPublic()
@@ -325,7 +353,9 @@ export async function ingestInboundEmail(
   input: IngestInboundEmailInput,
 ): Promise<IngestInboundEmailResult> {
   const resend = getResendClient();
-  const receivedEmailResponse = await resend.emails.receiving.get(input.resendEmailId);
+  const receivedEmailResponse = await resend.emails.receiving.get(
+    input.resendEmailId,
+  );
 
   if (receivedEmailResponse.error || !receivedEmailResponse.data) {
     throw new Error(
@@ -333,7 +363,8 @@ export async function ingestInboundEmail(
     );
   }
 
-  const receivedEmail: GetReceivingEmailResponseSuccess = receivedEmailResponse.data;
+  const receivedEmail: GetReceivingEmailResponseSuccess =
+    receivedEmailResponse.data;
 
   const fromMailbox = parseMailbox(receivedEmail.from);
   const toMailboxes = parseMailboxList(receivedEmail.to);
@@ -364,15 +395,23 @@ export async function ingestInboundEmail(
   }
 
   const headers = receivedEmail.headers;
-  const attachments = await listReceivingAttachments(input.resendEmailId, input.webhookEvent);
+  const attachments = await listReceivingAttachments(
+    input.resendEmailId,
+    input.webhookEvent,
+  );
 
-  const messageId = receivedEmail.message_id || input.webhookEvent?.data.message_id || null;
+  const messageId =
+    receivedEmail.message_id || input.webhookEvent?.data.message_id || null;
   const inReplyTo = getHeaderValue(headers, "in-reply-to");
-  const references = parseReferencesHeader(getHeaderValue(headers, "references"));
+  const references = parseReferencesHeader(
+    getHeaderValue(headers, "references"),
+  );
 
   const webhookCreatedAt = parseDateOrNull(input.webhookEvent?.created_at);
   const resendCreatedAt = parseDateOrNull(receivedEmail.created_at);
-  const rawMessageExpiresAt = parseDateOrNull(receivedEmail.raw?.expires_at ?? null);
+  const rawMessageExpiresAt = parseDateOrNull(
+    receivedEmail.raw?.expires_at ?? null,
+  );
 
   const emailRecord = await prisma.inboundEmail.upsert({
     where: {
@@ -392,10 +431,14 @@ export async function ingestInboundEmail(
       bccAddresses,
       replyToAddresses,
       toRecipients: toJson(toMailboxes),
-      ccRecipients: ccMailboxes.length > 0 ? toJson(ccMailboxes) : Prisma.JsonNull,
-      bccRecipients: bccMailboxes.length > 0 ? toJson(bccMailboxes) : Prisma.JsonNull,
+      ccRecipients:
+        ccMailboxes.length > 0 ? toJson(ccMailboxes) : Prisma.JsonNull,
+      bccRecipients:
+        bccMailboxes.length > 0 ? toJson(bccMailboxes) : Prisma.JsonNull,
       replyToRecipients:
-        replyToMailboxes.length > 0 ? toJson(replyToMailboxes) : Prisma.JsonNull,
+        replyToMailboxes.length > 0
+          ? toJson(replyToMailboxes)
+          : Prisma.JsonNull,
       subject: receivedEmail.subject,
       messageId,
       inReplyTo,
@@ -424,10 +467,14 @@ export async function ingestInboundEmail(
       bccAddresses,
       replyToAddresses,
       toRecipients: toJson(toMailboxes),
-      ccRecipients: ccMailboxes.length > 0 ? toJson(ccMailboxes) : Prisma.JsonNull,
-      bccRecipients: bccMailboxes.length > 0 ? toJson(bccMailboxes) : Prisma.JsonNull,
+      ccRecipients:
+        ccMailboxes.length > 0 ? toJson(ccMailboxes) : Prisma.JsonNull,
+      bccRecipients:
+        bccMailboxes.length > 0 ? toJson(bccMailboxes) : Prisma.JsonNull,
       replyToRecipients:
-        replyToMailboxes.length > 0 ? toJson(replyToMailboxes) : Prisma.JsonNull,
+        replyToMailboxes.length > 0
+          ? toJson(replyToMailboxes)
+          : Prisma.JsonNull,
       subject: receivedEmail.subject,
       messageId,
       inReplyTo,
@@ -451,7 +498,10 @@ export async function ingestInboundEmail(
     let uploadError: string | null = null;
 
     try {
-      uploadResult = await uploadAttachmentToSupabase(input.resendEmailId, attachment);
+      uploadResult = await uploadAttachmentToSupabase(
+        input.resendEmailId,
+        attachment,
+      );
       if (uploadResult) {
         uploadedAttachmentCount += 1;
       }

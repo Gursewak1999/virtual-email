@@ -1,9 +1,9 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    {
-      "path": "/api/jobs/resend-backfill",
-      "schedule": "*/10 * * * *"
-    }
-  ]
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "crons": [
+        {
+            "path": "/api/jobs/resend-backfill",
+            "schedule": "*/10 * * * *"
+        }
+    ]
 }

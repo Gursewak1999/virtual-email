@@ -8,7 +8,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-function parseWebhookEvent(rawPayload: string, request: NextRequest): WebhookEventPayload {
+function parseWebhookEvent(
+  rawPayload: string,
+  request: NextRequest,
+): WebhookEventPayload {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
 
   if (!webhookSecret) {

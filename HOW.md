@@ -61,8 +61,8 @@ Attachment bucket is auto-created on first upload if it does not exist.
 1. Add and verify `jatts.ca` in Resend with receiving capability enabled.
 2. Point MX records for inbound handling to Resend receiving as instructed in Resend dashboard.
 3. Configure a webhook in Resend:
-	- Endpoint: `https://<your-vercel-domain>/api/webhooks/resend/inbound`
-	- Event: `email.received`
+   - Endpoint: `https://<your-vercel-domain>/api/webhooks/resend/inbound`
+   - Event: `email.received`
 4. Save the webhook signing secret to `RESEND_WEBHOOK_SECRET`.
 
 Once MX is configured, inbound is catch-all on domain level: any address at `@jatts.ca` is received by Resend and forwarded to your webhook.

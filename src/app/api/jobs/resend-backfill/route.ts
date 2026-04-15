@@ -56,7 +56,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           ok: false,
-          error: receivingList.error?.message ?? "Failed to list received emails from Resend.",
+          error:
+            receivingList.error?.message ??
+            "Failed to list received emails from Resend.",
         },
         { status: 500 },
       );
