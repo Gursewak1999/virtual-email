@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model InboundEmail {
+  id                    String                   @id @default(cuid())
+  resendEmailId         String                   @unique
+  webhookEventType      String
+  webhookCreatedAt      DateTime?
+  webhookReceivedAt     DateTime                 @default(now())
+  resendCreatedAt       DateTime?
+
+  fromRaw               String
+  fromName              String?
+  fromAddress           String?
+  fromDomain            String?
+
+  toAddresses           String[]
+  ccAddresses           String[]
+  bccAddresses          String[]
+  replyToAddresses      String[]
+
+  toRecipients          Json
+  ccRecipients          Json?
+  bccRecipients         Json?
+  replyToRecipients     Json?
+
+  subject               String?
+  messageId             String?
+  inReplyTo             String?
+  references            String[]
+  headers               Json?
+  htmlBody              String?
+  textBody              String?
+
+  rawMessageDownloadUrl String?
+  rawMessageExpiresAt   DateTime?
+  attachmentCount       Int                      @default(0)
+
+  rawWebhook            Json?
+  rawReceivingEmail     Json?
+  source                String                   @default("webhook")
+
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  attachments           InboundEmailAttachment[]
+
+  @@index([createdAt])
+  @@index([fromAddress])
+  @@index([fromDomain])
+  @@index([subject])
+}
+
+model InboundEmailAttachment {
+  id                 String       @id @default(cuid())
+  emailId            String
+  email              InboundEmail @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  resendAttachmentId String
+  filename           String?
+  contentType        String?
+  contentDisposition String?
+  contentId          String?
+  sizeBytes          Int?
+  downloadUrl        String?
+  downloadExpiresAt  DateTime?
+
+  storageBucket      String?
+  storagePath        String?
+  storagePublicUrl   String?
+  storageUploadedAt  DateTime?
+  sha256             String?
+
+  rawMetadata        Json?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@unique([emailId, resendAttachmentId])
+  @@index([resendAttachmentId])
+  @@index([storageBucket, storagePath])
+}
