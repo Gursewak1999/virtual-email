@@ -13,7 +13,7 @@ This app receives inbound Resend emails, stores metadata in Supabase Postgres vi
 ## Key Routes
 
 - `POST /api/webhooks/resend/inbound`
-- `GET /api/jobs/resend-backfill` (used by Vercel cron)
+- `GET /api/jobs/resend-backfill` (optional manual replay endpoint)
 
 ## Setup
 

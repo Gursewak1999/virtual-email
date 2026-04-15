@@ -10,7 +10,7 @@ This project now ingests inbound emails from Resend, stores rich metadata in Sup
 - Fetches attachment signed URLs from Resend Receiving Attachments API.
 - Uploads attachment binaries to Supabase Storage.
 - Persists email + attachment metadata in Postgres with idempotent upserts.
-- Runs a Vercel cron backfill endpoint every 10 minutes to replay recent inbound messages and close delivery gaps.
+- Includes an optional backfill endpoint to replay recent inbound messages if needed.
 
 ## Database models
 
@@ -41,7 +41,7 @@ Copy `.env.example` to `.env` and set values:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_EMAIL_ATTACHMENTS_BUCKET`
 - `SUPABASE_EMAIL_ATTACHMENTS_PUBLIC`
-- `CRON_SECRET`
+- `CRON_SECRET` (optional, for securing manual backfill requests)
 
 ## Supabase setup
 
@@ -67,21 +67,20 @@ Attachment bucket is auto-created on first upload if it does not exist.
 
 Once MX is configured, inbound is catch-all on domain level: any address at `@jatts.ca` is received by Resend and forwarded to your webhook.
 
-## Vercel deployment (24x7)
+## Deployment (without Vercel cron)
 
-This repository includes `vercel.json` with cron:
+No Vercel cron schedule is configured. Inbound processing is driven directly by Resend webhooks.
 
-- Path: `/api/jobs/resend-backfill`
-- Schedule: every 10 minutes
+If you want to replay recent emails manually, call:
 
-To activate reliable backfill in production:
+- `GET /api/jobs/resend-backfill?limit=25`
+- With header `Authorization: Bearer <CRON_SECRET>` when `CRON_SECRET` is set
+
+For production:
 
 1. Deploy to Vercel.
 2. Add all environment variables in Vercel Project Settings.
-3. Ensure `CRON_SECRET` is set (Vercel will pass it as bearer token to cron route).
-4. Keep Resend webhook pointed at your production domain.
-
-Webhook + cron backfill + idempotent upsert gives robust 24x7 behavior on serverless infrastructure.
+3. Keep Resend webhook pointed at your production domain.
 
 ## Local run
 
