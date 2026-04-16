@@ -2,6 +2,6 @@ import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
-  return <DashboardClient tab="inboxes" />;
+export default function UsersPage() {
+  return <DashboardClient tab="users" />;
 }
