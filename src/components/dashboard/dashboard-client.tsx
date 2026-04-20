@@ -5,7 +5,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CopyIcon,
+  InboxIcon,
   LogOutIcon,
+  MailIcon,
   MoreHorizontalIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -53,6 +55,8 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -148,7 +152,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
           style={inboxPaneGridStyle}
         >
           <aside className="overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="border-b border-sidebar-border p-2">
+            <SidebarHeader className="border-b border-sidebar-border p-2">
               <div className="flex items-center gap-2">
                 <Button
                   size="icon-sm"
@@ -168,15 +172,18 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 </Button>
 
                 {inboxesCollapsed ? (
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                    Inb
-                  </span>
+                  <InboxIcon className="size-4 text-sidebar-foreground/70" />
                 ) : (
                   <>
-                    <h2 className="font-heading text-base font-semibold">
-                      Inboxes
-                    </h2>
-                    <Badge variant="secondary" className="ml-auto">
+                    <div className="grid min-w-0 flex-1 leading-tight">
+                      <h2 className="truncate font-heading text-sm font-semibold">
+                        Inboxes
+                      </h2>
+                      <p className="truncate text-[11px] text-sidebar-foreground/65">
+                        {mailboxes.length} mailbox account(s)
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
                       {filteredMailboxes.length}
                     </Badge>
                   </>
@@ -186,7 +193,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
               {!inboxesCollapsed ? (
                 <div className="relative mt-2">
                   <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
-                  <Input
+                  <SidebarInput
                     value={inboxSidebarSearch}
                     onChange={(event) =>
                       setInboxSidebarSearch(event.target.value)
@@ -196,7 +203,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                   />
                 </div>
               ) : null}
-            </div>
+            </SidebarHeader>
 
             <SidebarContent className="max-h-[calc(100vh-14rem)] p-2">
               {loadingMailboxes ? (
@@ -248,11 +255,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                               }}
                             >
                               {inboxesCollapsed ? (
-                                <span className="text-xs font-semibold uppercase">
-                                  {(
-                                    mailbox.label || mailbox.emailAddress
-                                  ).slice(0, 1)}
-                                </span>
+                                <InboxIcon className="size-4" />
                               ) : (
                                 <div className="w-full space-y-0.5">
                                   <div className="flex items-start justify-between gap-2">
@@ -286,7 +289,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
           </aside>
 
           <section className="overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div className="border-b border-sidebar-border p-2">
+            <SidebarHeader className="border-b border-sidebar-border p-2">
               <div className="flex items-center gap-2">
                 <Button
                   size="icon-sm"
@@ -306,16 +309,18 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 </Button>
 
                 {messagesCollapsed ? (
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-                    Msg
-                  </span>
+                  <MailIcon className="size-4 text-sidebar-foreground/70" />
                 ) : (
                   <>
-                    <div>
-                      <h3 className="text-base font-semibold">Messages</h3>
-                      <p className="text-xs text-sidebar-foreground/70">
+                    <div className="grid min-w-0 leading-tight">
+                      <h3 className="truncate text-sm font-semibold">
                         {selectedMailbox
                           ? `${selectedMailbox.label || selectedMailbox.emailAddress}`
+                          : "Messages"}
+                      </h3>
+                      <p className="truncate text-[11px] text-sidebar-foreground/70">
+                        {selectedMailbox
+                          ? "Conversation list"
                           : "Select an inbox"}
                       </p>
                     </div>
@@ -355,7 +360,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
               {!messagesCollapsed ? (
                 <div className="relative mt-2">
                   <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
-                  <Input
+                  <SidebarInput
                     value={messagesSidebarSearch}
                     onChange={(event) =>
                       setMessagesSidebarSearch(event.target.value)
@@ -365,7 +370,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                   />
                 </div>
               ) : null}
-            </div>
+            </SidebarHeader>
 
             <SidebarContent className="max-h-[calc(100vh-14rem)] p-2">
               {!selectedMailbox ? (
@@ -402,9 +407,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                               onClick={() => setSelectedEmailId(email.id)}
                             >
                               {messagesCollapsed ? (
-                                <span className="text-xs font-semibold uppercase">
-                                  {(email.subject || "M").slice(0, 1)}
-                                </span>
+                                <MailIcon className="size-4" />
                               ) : (
                                 <div className="w-full space-y-0.5">
                                   <p className="truncate text-sm font-semibold">

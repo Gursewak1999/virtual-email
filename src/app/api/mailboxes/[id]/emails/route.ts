@@ -79,6 +79,7 @@ export async function GET(
       htmlBody: email.htmlBody,
       createdAt: email.createdAt,
       status: email.status,
+      isRead: true,
       attachments: [],
     }));
 
@@ -104,6 +105,22 @@ export async function GET(
     },
   });
 
+  const readIds = new Set(
+    (
+      await prisma.inboundEmailRead.findMany({
+        where: {
+          mailboxId: mailbox.id,
+          emailId: {
+            in: inboundEmails.map((email) => email.id),
+          },
+        },
+        select: {
+          emailId: true,
+        },
+      })
+    ).map((item) => item.emailId),
+  );
+
   const emails = inboundEmails.map((email) => ({
     id: email.id,
     kind: "inbound" as const,
@@ -116,6 +133,7 @@ export async function GET(
     textBody: email.textBody,
     htmlBody: email.htmlBody,
     createdAt: email.createdAt,
+    isRead: readIds.has(email.id),
     messageId: email.messageId,
     attachments: email.attachments.map((attachment) => ({
       id: attachment.id,

@@ -1,8 +1,18 @@
-import { InboxIcon, UsersIcon, WorkflowIcon } from "lucide-react";
+import {
+  CalendarDaysIcon,
+  InboxIcon,
+  UsersIcon,
+  WorkflowIcon,
+} from "lucide-react";
 
 import { stripHtml } from "@/lib/email-helpers";
 
-export type DashboardTab = "inboxes" | "users" | "activity" | "settings";
+export type DashboardTab =
+  | "inboxes"
+  | "users"
+  | "consultations"
+  | "activity"
+  | "settings";
 export type MailFolder = "inbox" | "sent";
 export type UsersStatusFilter = "all" | "active" | "inactive";
 
@@ -40,6 +50,7 @@ export interface EmailRecord {
   htmlBody: string | null;
   createdAt: string;
   status?: string;
+  isRead: boolean;
   attachments: EmailAttachment[];
 }
 
@@ -81,6 +92,12 @@ export const navTabs: Array<{
     title: "Users",
     icon: UsersIcon,
     href: "/dashboard/users",
+  },
+  {
+    id: "consultations",
+    title: "Consultations",
+    icon: CalendarDaysIcon,
+    href: "/dashboard/consultations",
   },
   {
     id: "activity",

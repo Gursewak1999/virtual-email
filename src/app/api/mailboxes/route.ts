@@ -46,11 +46,21 @@ export async function GET(): Promise<NextResponse> {
 
   const withCounts = await Promise.all(
     mailboxes.map(async (mailbox) => {
-      const [inboxCount, sentCount] = await Promise.all([
+      const [inboxCount, readCount, sentCount] = await Promise.all([
         prisma.inboundEmail.count({
           where: {
             toAddresses: {
               has: mailbox.emailAddress,
+            },
+          },
+        }),
+        prisma.inboundEmailRead.count({
+          where: {
+            mailboxId: mailbox.id,
+            email: {
+              toAddresses: {
+                has: mailbox.emailAddress,
+              },
             },
           },
         }),
@@ -63,7 +73,7 @@ export async function GET(): Promise<NextResponse> {
 
       return {
         ...mailbox,
-        inboxCount,
+        inboxCount: Math.max(0, inboxCount - readCount),
         sentCount,
       };
     }),

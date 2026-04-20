@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   BellIcon,
   ChevronDownIcon,
+  InboxIcon,
   LogOutIcon,
   SearchIcon,
   Settings2Icon,
@@ -88,7 +89,7 @@ export function DashboardNav({ children }: DashboardNavProps) {
         } as CSSProperties
       }
     >
-      <Sidebar collapsible="offcanvas" variant="inset">
+      <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -101,6 +102,9 @@ export function DashboardNav({ children }: DashboardNavProps) {
                     />
                   }
                 >
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <InboxIcon className="size-4" />
+                  </div>
                   <div className="grid flex-1 text-left leading-tight">
                     <span className="text-sm font-semibold">
                       {activeWorkspaceInfo.title}

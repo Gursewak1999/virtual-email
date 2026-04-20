@@ -383,6 +383,75 @@ function useDashboardStateValue() {
     [],
   );
 
+  const markEmailAsRead = useCallback(
+    async (email: EmailRecord): Promise<void> => {
+      if (!selectedMailboxId || email.kind !== "inbound" || email.isRead) {
+        return;
+      }
+
+      const mailboxId = selectedMailboxId;
+
+      setEmails((currentEmails) =>
+        currentEmails.map((currentEmail) =>
+          currentEmail.id === email.id
+            ? {
+                ...currentEmail,
+                isRead: true,
+              }
+            : currentEmail,
+        ),
+      );
+
+      setThreadEmails((currentThreadEmails) =>
+        currentThreadEmails.map((currentEmail) =>
+          currentEmail.id === email.id
+            ? {
+                ...currentEmail,
+                isRead: true,
+              }
+            : currentEmail,
+        ),
+      );
+
+      setMailboxes((currentMailboxes) =>
+        currentMailboxes.map((mailbox) =>
+          mailbox.id === mailboxId
+            ? {
+                ...mailbox,
+                inboxCount: Math.max(0, mailbox.inboxCount - 1),
+              }
+            : mailbox,
+        ),
+      );
+
+      try {
+        const response = await fetch(
+          `/api/mailboxes/${mailboxId}/emails/${email.id}/read`,
+          {
+            method: "POST",
+          },
+        );
+
+        const payload = (await response.json()) as {
+          ok: boolean;
+          error?: string;
+        };
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || "Failed to mark email as read");
+        }
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to mark email as read",
+        );
+        await Promise.all([loadEmails(mailboxId, folder), loadMailboxes()]);
+      }
+    },
+    [folder, loadEmails, loadMailboxes, selectedMailboxId],
+  );
+
   useEffect(() => {
     void loadMailboxes();
   }, [loadMailboxes]);
@@ -716,6 +785,7 @@ function useDashboardStateValue() {
     inboxPaneGridStyle,
     loadMailboxes,
     loadEmails,
+    markEmailAsRead,
     handleCreateUserSubmit,
     handleDeleteMailbox,
     handleCopyPassword,

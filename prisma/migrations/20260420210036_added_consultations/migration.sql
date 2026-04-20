@@ -1,0 +1,8 @@
+-- RenameIndex
+ALTER INDEX "ConsultationMeetingEvent_consultationId_senderRole_createdAt_id" RENAME TO "ConsultationMeetingEvent_consultationId_senderRole_createdA_idx";
+
+-- RenameIndex
+ALTER INDEX "ConsultationMeetingEvent_consultationId_targetClientId_createdA" RENAME TO "ConsultationMeetingEvent_consultationId_targetClientId_crea_idx";
+
+-- RenameIndex
+ALTER INDEX "ConsultationMeetingEvent_consultationId_targetRole_createdAt_id" RENAME TO "ConsultationMeetingEvent_consultationId_targetRole_createdA_idx";
