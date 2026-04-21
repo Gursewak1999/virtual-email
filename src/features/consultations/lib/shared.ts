@@ -26,6 +26,8 @@ export type ConsultationMeetingEventType =
   | "offer"
   | "answer"
   | "ice-candidate"
+  | "screen-share-started"
+  | "screen-share-stopped"
   | "leave";
 
 export interface ConsultationAvailabilityDay {

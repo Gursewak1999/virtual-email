@@ -135,8 +135,23 @@ export function MeetingRoomClient({
     }
   }
 
+  if (canJoin && joinedName) {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.22),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.2),transparent_38%),linear-gradient(180deg,#06080f_0%,#0b1020_100%)] px-3 py-3 text-zinc-100 sm:px-4 sm:py-4">
+        <div className="mx-auto max-w-450">
+          <WebrtcMeetingPanel
+            consultation={consultation}
+            isHost={isHost}
+            displayName={joinedName}
+            onStatusChange={setStatus}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_25%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.12),_transparent_28%),linear-gradient(180deg,_#f9fbff_0%,_#eef4fb_100%)] px-4 py-8 text-zinc-900">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_25%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_28%),linear-gradient(180deg,#f9fbff_0%,#eef4fb_100%)] px-4 py-8 text-zinc-900">
       <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[0.34fr_0.66fr]">
         <div className="space-y-6">
           <Card className="border-zinc-200 bg-white/90 shadow-xl shadow-zinc-200/40">
@@ -254,36 +269,27 @@ export function MeetingRoomClient({
         </div>
 
         <div>
-          {canJoin && joinedName ? (
-            <WebrtcMeetingPanel
-              consultation={consultation}
-              isHost={isHost}
-              displayName={joinedName}
-              onStatusChange={setStatus}
-            />
-          ) : (
-            <div className="flex min-h-[70vh] items-center justify-center rounded-[1.75rem] border border-zinc-200 bg-white/90 p-8 text-center shadow-xl shadow-zinc-200/40">
-              <div className="max-w-md space-y-3">
-                <div className="inline-flex size-14 items-center justify-center rounded-full bg-zinc-100 text-zinc-700">
-                  <VideoIcon className="size-6" />
-                </div>
-                <h2 className="text-xl font-semibold text-zinc-900">
-                  {status === "COMPLETED"
-                    ? "This consultation has been completed."
-                    : status === "EXPIRED"
-                      ? "This consultation has expired."
-                      : status === "CANCELLED"
-                        ? "This consultation has been cancelled."
-                        : "Waiting to join the meeting."}
-                </h2>
-                <p className="text-sm text-zinc-600">
-                  {status === "PENDING"
-                    ? "Enter your guest name on the left to join."
-                    : "If you need a new time, please contact the host for another booking link."}
-                </p>
+          <div className="flex min-h-[70vh] items-center justify-center rounded-[1.75rem] border border-zinc-200 bg-white/90 p-8 text-center shadow-xl shadow-zinc-200/40">
+            <div className="max-w-md space-y-3">
+              <div className="inline-flex size-14 items-center justify-center rounded-full bg-zinc-100 text-zinc-700">
+                <VideoIcon className="size-6" />
               </div>
+              <h2 className="text-xl font-semibold text-zinc-900">
+                {status === "COMPLETED"
+                  ? "This consultation has been completed."
+                  : status === "EXPIRED"
+                    ? "This consultation has expired."
+                    : status === "CANCELLED"
+                      ? "This consultation has been cancelled."
+                      : "Waiting to join the meeting."}
+              </h2>
+              <p className="text-sm text-zinc-600">
+                {status === "PENDING"
+                  ? "Enter your guest name on the left to join."
+                  : "If you need a new time, please contact the host for another booking link."}
+              </p>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </main>

@@ -53,6 +53,8 @@ export const consultationMeetingEventTypeSchema = z.enum([
   "offer",
   "answer",
   "ice-candidate",
+  "screen-share-started",
+  "screen-share-stopped",
   "leave",
 ]);
 
