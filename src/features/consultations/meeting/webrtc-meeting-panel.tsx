@@ -38,12 +38,21 @@ import {
   type ConsultationMeetingRole,
   type ConsultationStatus,
 } from "@/features/consultations/lib/shared";
+import {
+  createClient,
+  type RealtimeChannel,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
 const EVENT_POLL_INTERVAL_MS = 1500;
 const IDLE_POLL_INTERVAL_MS = 3500;
 const HIDDEN_POLL_INTERVAL_MS = 7000;
+const STABLE_FALLBACK_POLL_INTERVAL_MS = 20000;
+const REALTIME_CONNECTED_POLL_INTERVAL_MS = 60000;
+const REALTIME_HIDDEN_POLL_INTERVAL_MS = 90000;
 const HEARTBEAT_INTERVAL_MS = 8000;
 const OFFER_THROTTLE_MS = 1200;
+const REALTIME_SIGNAL_EVENT = "meeting-signal";
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: ["stun:stun.l.google.com:19302"] },
   { urls: ["stun:stun1.l.google.com:19302"] },
@@ -80,9 +89,27 @@ interface MeetingEventPayload {
   id: string;
   senderRole: ConsultationMeetingRole;
   senderClientId: string;
+  targetRole?: ConsultationMeetingRole | null;
   targetClientId: string | null;
   eventType: string;
   payload: unknown;
+}
+
+type MeetingSignalEventType =
+  | "presence"
+  | "request-offer"
+  | "offer"
+  | "answer"
+  | "ice-candidate"
+  | "screen-share-started"
+  | "screen-share-stopped"
+  | "leave";
+
+interface MeetingSignalInput {
+  eventType: MeetingSignalEventType;
+  targetRole?: ConsultationMeetingRole;
+  targetClientId?: string;
+  payload?: unknown;
 }
 
 interface WebrtcMeetingPanelProps {
@@ -238,6 +265,30 @@ function parseRemoteTileId(
   };
 }
 
+function getSupabaseBrowserConfig(): { url: string; key: string } | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  console.log(
+    "[test1] Using Supabase Realtime for meeting event synchronization.",
+    {
+      url,
+      key,
+    },
+  );
+
+  if (!url || !key) {
+    return null;
+  }
+
+  return {
+    url,
+    key,
+  };
+}
+
 export function WebrtcMeetingPanel({
   consultation,
   isHost,
@@ -265,13 +316,16 @@ export function WebrtcMeetingPanel({
   const processedEventIdsRef = useRef<Set<string>>(new Set());
   const latestCursorRef = useRef<string | null>(null);
   const displayNameRef = useRef(displayName);
-  const audioEnabledRef = useRef(true);
+  const audioEnabledRef = useRef(false);
   const videoEnabledRef = useRef(true);
   const chatMessageIdsRef = useRef<Set<string>>(new Set());
   const offerThrottleByClientRef = useRef<Map<string, number>>(new Map());
   const dataChannelsRef = useRef<Map<string, RTCDataChannel>>(new Map());
   const screenShareByClientRef = useRef<Map<string, string>>(new Map());
   const localScreenSendersRef = useRef<Map<string, RTCRtpSender[]>>(new Map());
+  const realtimeClientRef = useRef<SupabaseClient | null>(null);
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
+  const realtimeConnectedRef = useRef(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const [remoteParticipants, setRemoteParticipants] = useState<
@@ -287,7 +341,7 @@ export function WebrtcMeetingPanel({
     "Preparing your in-app consultation room...",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(false);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [cameraAvailable, setCameraAvailable] = useState(true);
   const [microphoneAvailable, setMicrophoneAvailable] = useState(true);
@@ -455,20 +509,7 @@ export function WebrtcMeetingPanel({
     }
   }
 
-  async function postMeetingEvent(input: {
-    eventType:
-      | "presence"
-      | "request-offer"
-      | "offer"
-      | "answer"
-      | "ice-candidate"
-      | "screen-share-started"
-      | "screen-share-stopped"
-      | "leave";
-    targetRole?: ConsultationMeetingRole;
-    targetClientId?: string;
-    payload?: unknown;
-  }): Promise<void> {
+  async function postMeetingEvent(input: MeetingSignalInput): Promise<void> {
     const response = await fetch(
       `/api/consultations/meeting/${consultation.meetingCode}/events`,
       {
@@ -496,6 +537,68 @@ export function WebrtcMeetingPanel({
     }
   }
 
+  function shouldAcceptMeetingEvent(event: MeetingEventPayload): boolean {
+    if (event.senderClientId === clientIdRef.current) {
+      return false;
+    }
+
+    if (event.targetClientId && event.targetClientId !== clientIdRef.current) {
+      return false;
+    }
+
+    if (event.targetRole && event.targetRole !== role) {
+      return false;
+    }
+
+    return true;
+  }
+
+  async function broadcastRealtimeMeetingEvent(
+    input: MeetingSignalInput,
+  ): Promise<boolean> {
+    const realtimeChannel = realtimeChannelRef.current;
+
+    if (!realtimeChannel || !realtimeConnectedRef.current) {
+      return false;
+    }
+
+    const event: MeetingEventPayload = {
+      id: createMessageId(),
+      senderRole: role,
+      senderClientId: clientIdRef.current,
+      targetRole: input.targetRole ?? null,
+      targetClientId: input.targetClientId ?? null,
+      eventType: input.eventType,
+      payload: input.payload,
+    };
+
+    const sendResult = await realtimeChannel.send({
+      type: "broadcast",
+      event: REALTIME_SIGNAL_EVENT,
+      payload: event,
+    });
+
+    return sendResult === "ok";
+  }
+
+  async function sendMeetingEvent(
+    input: MeetingSignalInput,
+    options?: { persistAlways?: boolean },
+  ): Promise<void> {
+    const persistAlways = options?.persistAlways ?? false;
+    let sentRealtime = false;
+
+    try {
+      sentRealtime = await broadcastRealtimeMeetingEvent(input);
+    } catch {
+      sentRealtime = false;
+    }
+
+    if (persistAlways || !sentRealtime) {
+      await postMeetingEvent(input);
+    }
+  }
+
   function buildPresencePayload() {
     return {
       displayName: displayNameRef.current,
@@ -506,11 +609,18 @@ export function WebrtcMeetingPanel({
     };
   }
 
-  async function publishPresence(): Promise<void> {
-    await postMeetingEvent({
-      eventType: "presence",
-      payload: buildPresencePayload(),
-    });
+  async function publishPresence(options?: {
+    persistAlways?: boolean;
+  }): Promise<void> {
+    await sendMeetingEvent(
+      {
+        eventType: "presence",
+        payload: buildPresencePayload(),
+      },
+      {
+        persistAlways: options?.persistAlways ?? false,
+      },
+    );
   }
 
   function getOrCreateRemoteStreamMap(
@@ -796,7 +906,7 @@ export function WebrtcMeetingPanel({
         return;
       }
 
-      void postMeetingEvent({
+      void sendMeetingEvent({
         eventType: "ice-candidate",
         targetClientId: clientId,
         targetRole: participantsRef.current.get(clientId)?.role,
@@ -893,7 +1003,7 @@ export function WebrtcMeetingPanel({
       connectionState: "connecting",
     });
 
-    await postMeetingEvent({
+    await sendMeetingEvent({
       eventType: "offer",
       targetClientId: clientId,
       targetRole: participantsRef.current.get(clientId)?.role,
@@ -997,7 +1107,7 @@ export function WebrtcMeetingPanel({
       connectionState: "connecting",
     });
 
-    await postMeetingEvent({
+    await sendMeetingEvent({
       eventType: "answer",
       targetClientId: event.senderClientId,
       targetRole: event.senderRole,
@@ -1216,7 +1326,7 @@ export function WebrtcMeetingPanel({
         void stopScreenShare();
       };
 
-      await postMeetingEvent({
+      await sendMeetingEvent({
         eventType: "screen-share-started",
         payload: {
           streamId: stream.id,
@@ -1273,7 +1383,7 @@ export function WebrtcMeetingPanel({
     setIsScreenSharing(false);
 
     if (screenId) {
-      await postMeetingEvent({
+      await sendMeetingEvent({
         eventType: "screen-share-stopped",
         payload: {
           streamId: screenId,
@@ -1307,7 +1417,7 @@ export function WebrtcMeetingPanel({
 
     try {
       closeAllPeerConnections();
-      await publishPresence();
+      await publishPresence({ persistAlways: true });
       await ensureMeshConnections();
       setStatusMessage("Meeting room restarted.");
     } catch (error) {
@@ -1393,7 +1503,9 @@ export function WebrtcMeetingPanel({
     broadcastDataChannel(payload);
   }
 
-  const publishPresenceEvent = useEffectEvent(async () => publishPresence());
+  const publishPresenceEvent = useEffectEvent(
+    async (options?: { persistAlways?: boolean }) => publishPresence(options),
+  );
   const processIncomingEventsEvent = useEffectEvent(
     async (events: MeetingEventPayload[]) => processIncomingEvents(events),
   );
@@ -1406,12 +1518,13 @@ export function WebrtcMeetingPanel({
   const closeAllPeerConnectionsEvent = useEffectEvent(() =>
     closeAllPeerConnections(),
   );
-  const postMeetingEventEvent = useEffectEvent(
-    async (input: Parameters<typeof postMeetingEvent>[0]) =>
-      postMeetingEvent(input),
+  const sendMeetingEventEvent = useEffectEvent(
+    async (input: MeetingSignalInput, options?: { persistAlways?: boolean }) =>
+      sendMeetingEvent(input, options),
   );
 
   useEffect(() => {
+    console.log("[Effect] Meeting effect started");
     let cancelled = false;
     let pollTimer: number | null = null;
     let heartbeatTimer: number | null = null;
@@ -1421,6 +1534,110 @@ export function WebrtcMeetingPanel({
     const remoteVideoElements = remoteVideoRefs.current;
     const dataChannels = dataChannelsRef.current;
     const screenShareByClient = screenShareByClientRef.current;
+    const supabaseConfig = getSupabaseBrowserConfig();
+    const realtimeChannelName = `consultation-meeting:${consultation.meetingCode}`;
+    console.log("[Effect] supabaseConfig available:", !!supabaseConfig);
+
+    function setupRealtimeChannel(): void {
+      console.log("[Realtime] setupRealtimeChannel called");
+      console.log(
+        "[Realtime] supabaseConfig:",
+        supabaseConfig ? "present" : "missing",
+      );
+
+      if (!supabaseConfig) {
+        console.log("[Realtime] Skipping: no supabaseConfig");
+        realtimeConnectedRef.current = false;
+        return;
+      }
+
+      try {
+        const realtimeClient = createClient(
+          supabaseConfig.url,
+          supabaseConfig.key,
+          {
+            auth: {
+              persistSession: false,
+              autoRefreshToken: false,
+            },
+          },
+        );
+
+        console.log("[Realtime] Client created successfully");
+        realtimeClientRef.current = realtimeClient;
+      } catch (error) {
+        console.error("[Realtime] Failed to create client:", error);
+        realtimeConnectedRef.current = false;
+        return;
+      }
+
+      const realtimeChannel = realtimeClientRef.current.channel(
+        realtimeChannelName,
+        {
+          config: {
+            broadcast: {
+              self: false,
+              ack: false,
+            },
+          },
+        },
+      );
+
+      realtimeChannelRef.current = realtimeChannel;
+
+      realtimeChannel.on(
+        "broadcast",
+        { event: REALTIME_SIGNAL_EVENT },
+        (message) => {
+          const payload = message.payload;
+
+          if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
+          ) {
+            return;
+          }
+
+          const event = payload as MeetingEventPayload;
+
+          if (!shouldAcceptMeetingEvent(event)) {
+            return;
+          }
+
+          void processIncomingEventsEvent([event]);
+        },
+      );
+
+      realtimeChannel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          realtimeConnectedRef.current = true;
+          return;
+        }
+
+        if (
+          status === "CHANNEL_ERROR" ||
+          status === "TIMED_OUT" ||
+          status === "CLOSED"
+        ) {
+          realtimeConnectedRef.current = false;
+        }
+      });
+    }
+
+    function cleanupRealtimeChannel(): void {
+      realtimeConnectedRef.current = false;
+
+      const realtimeClient = realtimeClientRef.current;
+      const realtimeChannel = realtimeChannelRef.current;
+
+      if (realtimeClient && realtimeChannel) {
+        void realtimeClient.removeChannel(realtimeChannel);
+      }
+
+      realtimeChannelRef.current = null;
+      realtimeClientRef.current = null;
+    }
 
     async function startLocalMedia(): Promise<void> {
       setErrorMessage(null);
@@ -1457,18 +1674,19 @@ export function WebrtcMeetingPanel({
           return;
         }
 
+        localStream.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+        });
         localStreamRef.current = localStream;
         attachLocalStream(localStream);
         setMicrophoneAvailable(localStream.getAudioTracks().length > 0);
         setCameraAvailable(localStream.getVideoTracks().length > 0);
-        audioEnabledRef.current = localStream
-          .getAudioTracks()
-          .every((track) => track.enabled);
+        audioEnabledRef.current = false;
         videoEnabledRef.current = localStream.getVideoTracks().length > 0;
-        setAudioEnabled(audioEnabledRef.current);
+        setAudioEnabled(false);
         setVideoEnabled(videoEnabledRef.current);
         setAggregateConnectionState("waiting");
-        await publishPresenceEvent();
+        await publishPresenceEvent({ persistAlways: true });
       } catch (error) {
         if (cancelled) {
           return;
@@ -1487,6 +1705,8 @@ export function WebrtcMeetingPanel({
       if (cancelled) {
         return;
       }
+
+      let receivedEventsCount = 0;
 
       try {
         const query = new URLSearchParams({
@@ -1537,9 +1757,15 @@ export function WebrtcMeetingPanel({
           setRoomPeerLimit(payload.peerLimit);
         }
 
-        await processIncomingEventsEvent(payload.events || []);
+        receivedEventsCount = payload.events?.length ?? 0;
+
+        const incomingEvents = payload.events || [];
+
+        await processIncomingEventsEvent(incomingEvents);
         pruneStaleParticipantsEvent();
-        await ensureMeshConnectionsEvent();
+        if (receivedEventsCount > 0 || incomingEvents.length > 0) {
+          await ensureMeshConnectionsEvent();
+        }
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(
@@ -1551,12 +1777,27 @@ export function WebrtcMeetingPanel({
       } finally {
         if (!cancelled) {
           const hasActivePeers = participantsRef.current.size > 0;
-          const nextPollInterval =
-            document.visibilityState === "hidden"
+          const hasConnectedPeers = Array.from(
+            participantsRef.current.values(),
+          ).some((participant) => participant.connectionState === "connected");
+          const hasOpenDataChannels = Array.from(
+            dataChannelsRef.current.values(),
+          ).some((channel) => channel.readyState === "open");
+
+          const isStableP2PRoom =
+            hasActivePeers && hasConnectedPeers && hasOpenDataChannels;
+
+          const nextPollInterval = realtimeConnectedRef.current
+            ? document.visibilityState === "hidden"
+              ? REALTIME_HIDDEN_POLL_INTERVAL_MS
+              : REALTIME_CONNECTED_POLL_INTERVAL_MS
+            : document.visibilityState === "hidden"
               ? HIDDEN_POLL_INTERVAL_MS
-              : hasActivePeers
-                ? EVENT_POLL_INTERVAL_MS
-                : IDLE_POLL_INTERVAL_MS;
+              : !hasActivePeers
+                ? IDLE_POLL_INTERVAL_MS
+                : isStableP2PRoom && receivedEventsCount === 0
+                  ? STABLE_FALLBACK_POLL_INTERVAL_MS
+                  : EVENT_POLL_INTERVAL_MS;
 
           pollTimer = window.setTimeout(() => {
             void pollEvents();
@@ -1565,6 +1806,7 @@ export function WebrtcMeetingPanel({
       }
     }
 
+    setupRealtimeChannel();
     void startLocalMedia();
     void pollEvents();
 
@@ -1599,10 +1841,15 @@ export function WebrtcMeetingPanel({
         window.clearInterval(staleParticipantTimer);
       }
 
-      void postMeetingEventEvent({
-        eventType: "leave",
-        payload: buildPresencePayload(),
-      }).catch(() => undefined);
+      void sendMeetingEventEvent(
+        {
+          eventType: "leave",
+          payload: buildPresencePayload(),
+        },
+        {
+          persistAlways: true,
+        },
+      ).catch(() => undefined);
 
       closeAllPeerConnectionsEvent();
       localStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -1619,6 +1866,7 @@ export function WebrtcMeetingPanel({
       remoteVideoElements.clear();
       dataChannels.clear();
       screenShareByClient.clear();
+      cleanupRealtimeChannel();
       setRemoteParticipants([]);
       setRemoteScreenParticipants([]);
       setIsScreenSharing(false);
