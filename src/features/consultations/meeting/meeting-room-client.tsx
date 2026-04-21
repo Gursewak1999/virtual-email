@@ -119,7 +119,9 @@ export function MeetingRoomClient({
       };
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error || "Failed to mark consultation complete");
+        throw new Error(
+          payload.error || "Failed to mark consultation complete",
+        );
       }
 
       setStatus("COMPLETED");
@@ -223,7 +225,10 @@ export function MeetingRoomClient({
               </div>
 
               {isHost && canJoin ? (
-                <Button onClick={() => void handleMarkCompleted()} disabled={busy}>
+                <Button
+                  onClick={() => void handleMarkCompleted()}
+                  disabled={busy}
+                >
                   <BadgeCheckIcon />
                   {busy ? "Saving..." : "Mark Completed"}
                 </Button>

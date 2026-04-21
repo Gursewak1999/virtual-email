@@ -1,6 +1,13 @@
 "use client";
 
-import { type FormEvent, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   CameraIcon,
   CameraOffIcon,
@@ -163,7 +170,10 @@ function getIceServers(): RTCIceServer[] {
   }
 }
 
-function shouldInitiateOffer(localClientId: string, remoteClientId: string): boolean {
+function shouldInitiateOffer(
+  localClientId: string,
+  remoteClientId: string,
+): boolean {
   return localClientId.localeCompare(remoteClientId) < 0;
 }
 
@@ -209,7 +219,9 @@ function buildRemoteTileId(clientId: string, streamId: string): string {
   return `remote:${clientId}:${streamId}`;
 }
 
-function parseRemoteTileId(tileId: string): { clientId: string; streamId: string } | null {
+function parseRemoteTileId(
+  tileId: string,
+): { clientId: string; streamId: string } | null {
   if (!tileId.startsWith("remote:")) {
     return null;
   }
@@ -244,7 +256,9 @@ export function WebrtcMeetingPanel({
     new Map(),
   );
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
-  const participantsRef = useRef<Map<string, RemoteParticipantState>>(new Map());
+  const participantsRef = useRef<Map<string, RemoteParticipantState>>(
+    new Map(),
+  );
   const pendingIceCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(
     new Map(),
   );
@@ -279,9 +293,12 @@ export function WebrtcMeetingPanel({
   const [microphoneAvailable, setMicrophoneAvailable] = useState(true);
   const [restarting, setRestarting] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [remoteScreenParticipants, setRemoteScreenParticipants] = useState<string[]>([]);
+  const [remoteScreenParticipants, setRemoteScreenParticipants] = useState<
+    string[]
+  >([]);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("grid");
-  const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("participants");
+  const [rightPanelMode, setRightPanelMode] =
+    useState<RightPanelMode>("participants");
   const [pinnedTileId, setPinnedTileId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -327,7 +344,9 @@ export function WebrtcMeetingPanel({
 
     if (connectionStates.some((state) => state === "failed")) {
       setAggregateConnectionState("failed");
-      setStatusMessage("One or more peer connections failed. Try reconnecting.");
+      setStatusMessage(
+        "One or more peer connections failed. Try reconnecting.",
+      );
       return;
     }
 
@@ -340,7 +359,9 @@ export function WebrtcMeetingPanel({
     }
 
     if (
-      connectionStates.some((state) => state === "connecting" || state === "new")
+      connectionStates.some(
+        (state) => state === "connecting" || state === "new",
+      )
     ) {
       setAggregateConnectionState("connecting");
       setStatusMessage("Connecting peers inside the in-app meeting room...");
@@ -356,7 +377,9 @@ export function WebrtcMeetingPanel({
   }
 
   function syncRemoteScreenParticipants(): void {
-    setRemoteScreenParticipants(Array.from(screenShareByClientRef.current.keys()));
+    setRemoteScreenParticipants(
+      Array.from(screenShareByClientRef.current.keys()),
+    );
   }
 
   function attachLocalStream(stream: MediaStream | null): void {
@@ -402,12 +425,16 @@ export function WebrtcMeetingPanel({
       return null;
     }
 
-    return remoteStreamsRef.current
-      .get(parsed.clientId)
-      ?.get(parsed.streamId)?.stream ?? null;
+    return (
+      remoteStreamsRef.current.get(parsed.clientId)?.get(parsed.streamId)
+        ?.stream ?? null
+    );
   }
 
-  function setRemoteVideoElement(tileId: string, element: HTMLVideoElement | null): void {
+  function setRemoteVideoElement(
+    tileId: string,
+    element: HTMLVideoElement | null,
+  ): void {
     if (element) {
       remoteVideoRefs.current.set(tileId, element);
       element.srcObject = getStreamForTile(tileId);
@@ -417,7 +444,10 @@ export function WebrtcMeetingPanel({
     remoteVideoRefs.current.delete(tileId);
   }
 
-  function attachRemoteStream(tileId: string, stream: MediaStream | null): void {
+  function attachRemoteStream(
+    tileId: string,
+    stream: MediaStream | null,
+  ): void {
     const element = remoteVideoRefs.current.get(tileId);
 
     if (element) {
@@ -458,11 +488,9 @@ export function WebrtcMeetingPanel({
     );
 
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            error?: string;
-          }
-        | null;
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
       throw new Error(payload?.error || "Unable to reach the meeting server.");
     }
@@ -485,7 +513,9 @@ export function WebrtcMeetingPanel({
     });
   }
 
-  function getOrCreateRemoteStreamMap(clientId: string): Map<string, RemoteStreamEntry> {
+  function getOrCreateRemoteStreamMap(
+    clientId: string,
+  ): Map<string, RemoteStreamEntry> {
     const existing = remoteStreamsRef.current.get(clientId);
 
     if (existing) {
@@ -641,22 +671,28 @@ export function WebrtcMeetingPanel({
 
         chatMessageIdsRef.current.add(parsed.id);
         setChatMessages((messages) =>
-          [...messages, {
-            id: parsed.id,
-            senderClientId: parsed.senderClientId,
-            senderName: parsed.senderName,
-            senderRole: parsed.senderRole,
-            text: parsed.text,
-            sentAt: parsed.sentAt,
-            self: parsed.senderClientId === clientIdRef.current,
-          }].sort((left, right) => left.sentAt - right.sentAt),
+          [
+            ...messages,
+            {
+              id: parsed.id,
+              senderClientId: parsed.senderClientId,
+              senderName: parsed.senderName,
+              senderRole: parsed.senderRole,
+              text: parsed.text,
+              sentAt: parsed.sentAt,
+              self: parsed.senderClientId === clientIdRef.current,
+            },
+          ].sort((left, right) => left.sentAt - right.sentAt),
         );
         return;
       }
 
       if (parsed.type === "screen-share") {
         if (parsed.action === "start") {
-          screenShareByClientRef.current.set(parsed.senderClientId, parsed.streamId);
+          screenShareByClientRef.current.set(
+            parsed.senderClientId,
+            parsed.streamId,
+          );
           syncRemoteScreenParticipants();
           return;
         }
@@ -722,14 +758,15 @@ export function WebrtcMeetingPanel({
     const localScreenStream = localScreenStreamRef.current;
 
     if (localScreenStream) {
-      const screenSenders = localScreenStream.getTracks().map((track) =>
-        peerConnection.addTrack(track, localScreenStream),
-      );
+      const screenSenders = localScreenStream
+        .getTracks()
+        .map((track) => peerConnection.addTrack(track, localScreenStream));
       localScreenSendersRef.current.set(clientId, screenSenders);
     }
 
     peerConnection.ontrack = (event) => {
-      const participantScreenStreamId = screenShareByClientRef.current.get(clientId);
+      const participantScreenStreamId =
+        screenShareByClientRef.current.get(clientId);
 
       event.streams.forEach((stream) => {
         const inferredKind: StreamKind =
@@ -745,9 +782,12 @@ export function WebrtcMeetingPanel({
     };
 
     if (shouldInitiateOffer(clientIdRef.current, clientId)) {
-      const outgoingChannel = peerConnection.createDataChannel("consultation-chat", {
-        ordered: true,
-      });
+      const outgoingChannel = peerConnection.createDataChannel(
+        "consultation-chat",
+        {
+          ordered: true,
+        },
+      );
       setupDataChannel(clientId, outgoingChannel);
     }
 
@@ -867,7 +907,9 @@ export function WebrtcMeetingPanel({
     }
 
     const payload =
-      event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+      event.payload &&
+      typeof event.payload === "object" &&
+      !Array.isArray(event.payload)
         ? (event.payload as {
             displayName?: string;
             audioEnabled?: boolean;
@@ -876,10 +918,15 @@ export function WebrtcMeetingPanel({
             screenStreamId?: string;
           })
         : {};
-    const currentParticipant = participantsRef.current.get(event.senderClientId);
+    const currentParticipant = participantsRef.current.get(
+      event.senderClientId,
+    );
 
     if (payload.screenSharing && payload.screenStreamId) {
-      screenShareByClientRef.current.set(event.senderClientId, payload.screenStreamId);
+      screenShareByClientRef.current.set(
+        event.senderClientId,
+        payload.screenStreamId,
+      );
     }
 
     if (!payload.screenSharing) {
@@ -896,8 +943,10 @@ export function WebrtcMeetingPanel({
           ? consultation.hostName
           : consultation.attendeeName),
       role: event.senderRole,
-      audioEnabled: payload.audioEnabled ?? currentParticipant?.audioEnabled ?? true,
-      videoEnabled: payload.videoEnabled ?? currentParticipant?.videoEnabled ?? true,
+      audioEnabled:
+        payload.audioEnabled ?? currentParticipant?.audioEnabled ?? true,
+      videoEnabled:
+        payload.videoEnabled ?? currentParticipant?.videoEnabled ?? true,
       lastSeenAt: Date.now(),
       connectionState: currentParticipant?.connectionState ?? "waiting",
     });
@@ -923,7 +972,9 @@ export function WebrtcMeetingPanel({
     });
   }
 
-  async function handleIncomingOffer(event: MeetingEventPayload): Promise<void> {
+  async function handleIncomingOffer(
+    event: MeetingEventPayload,
+  ): Promise<void> {
     if (!event.payload || typeof event.payload !== "object") {
       return;
     }
@@ -954,10 +1005,16 @@ export function WebrtcMeetingPanel({
     });
   }
 
-  async function handleIncomingAnswer(event: MeetingEventPayload): Promise<void> {
+  async function handleIncomingAnswer(
+    event: MeetingEventPayload,
+  ): Promise<void> {
     const peerConnection = peerConnectionsRef.current.get(event.senderClientId);
 
-    if (!peerConnection || !event.payload || typeof event.payload !== "object") {
+    if (
+      !peerConnection ||
+      !event.payload ||
+      typeof event.payload !== "object"
+    ) {
       return;
     }
 
@@ -978,7 +1035,8 @@ export function WebrtcMeetingPanel({
     const peerConnection = peerConnectionsRef.current.get(event.senderClientId);
 
     if (!peerConnection?.remoteDescription) {
-      const queue = pendingIceCandidatesRef.current.get(event.senderClientId) || [];
+      const queue =
+        pendingIceCandidatesRef.current.get(event.senderClientId) || [];
       queue.push(candidate);
       pendingIceCandidatesRef.current.set(event.senderClientId, queue);
       return;
@@ -1015,7 +1073,9 @@ export function WebrtcMeetingPanel({
     syncRemoteScreenParticipants();
   }
 
-  async function processIncomingEvents(events: MeetingEventPayload[]): Promise<void> {
+  async function processIncomingEvents(
+    events: MeetingEventPayload[],
+  ): Promise<void> {
     for (const event of events) {
       if (processedEventIdsRef.current.has(event.id)) {
         continue;
@@ -1023,7 +1083,10 @@ export function WebrtcMeetingPanel({
 
       processedEventIdsRef.current.add(event.id);
 
-      if (event.eventType === "presence" || event.eventType === "request-offer") {
+      if (
+        event.eventType === "presence" ||
+        event.eventType === "request-offer"
+      ) {
         upsertPresenceParticipant(event);
         await maybeCreateOffer(event.senderClientId);
         continue;
@@ -1139,10 +1202,13 @@ export function WebrtcMeetingPanel({
       attachLocalScreenStream(stream);
       setIsScreenSharing(true);
 
-      for (const [clientId, peerConnection] of peerConnectionsRef.current.entries()) {
-        const senders = stream.getTracks().map((track) =>
-          peerConnection.addTrack(track, stream),
-        );
+      for (const [
+        clientId,
+        peerConnection,
+      ] of peerConnectionsRef.current.entries()) {
+        const senders = stream
+          .getTracks()
+          .map((track) => peerConnection.addTrack(track, stream));
         localScreenSendersRef.current.set(clientId, senders);
       }
 
@@ -1168,7 +1234,9 @@ export function WebrtcMeetingPanel({
       await renegotiateAllPeers();
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to start screen sharing.",
+        error instanceof Error
+          ? error.message
+          : "Unable to start screen sharing.",
       );
     }
   }
@@ -1182,7 +1250,10 @@ export function WebrtcMeetingPanel({
 
     const screenId = localScreenStreamIdRef.current;
 
-    for (const [clientId, peerConnection] of peerConnectionsRef.current.entries()) {
+    for (const [
+      clientId,
+      peerConnection,
+    ] of peerConnectionsRef.current.entries()) {
       const senders = localScreenSendersRef.current.get(clientId) || [];
 
       senders.forEach((sender) => {
@@ -1326,7 +1397,9 @@ export function WebrtcMeetingPanel({
   const processIncomingEventsEvent = useEffectEvent(
     async (events: MeetingEventPayload[]) => processIncomingEvents(events),
   );
-  const pruneStaleParticipantsEvent = useEffectEvent(() => pruneStaleParticipants());
+  const pruneStaleParticipantsEvent = useEffectEvent(() =>
+    pruneStaleParticipants(),
+  );
   const ensureMeshConnectionsEvent = useEffectEvent(async () =>
     ensureMeshConnections(),
   );
@@ -1535,7 +1608,9 @@ export function WebrtcMeetingPanel({
       localStreamRef.current?.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
       attachLocalStream(null);
-      localScreenStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localScreenStreamRef.current
+        ?.getTracks()
+        .forEach((track) => track.stop());
       localScreenStreamRef.current = null;
       localScreenStreamIdRef.current = null;
       attachLocalScreenStream(null);
@@ -1672,13 +1747,18 @@ export function WebrtcMeetingPanel({
                 </Badge>
               ) : null}
               {tile.kind === "screen" ? (
-                <Badge variant="outline" className="border-white/25 text-white/90">
+                <Badge
+                  variant="outline"
+                  className="border-white/25 text-white/90"
+                >
                   Screen Share
                 </Badge>
               ) : null}
             </div>
             <p className="text-xs text-white/60">
-              {tile.isLocal ? "You" : getParticipantConnectionLabel(tile.connectionState)}
+              {tile.isLocal
+                ? "You"
+                : getParticipantConnectionLabel(tile.connectionState)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1690,7 +1770,11 @@ export function WebrtcMeetingPanel({
                   : "bg-red-500/20 text-red-100",
               ].join(" ")}
             >
-              {tile.audioEnabled ? <MicIcon className="size-3" /> : <MicOffIcon className="size-3" />}
+              {tile.audioEnabled ? (
+                <MicIcon className="size-3" />
+              ) : (
+                <MicOffIcon className="size-3" />
+              )}
             </span>
             <span
               className={[
@@ -1709,9 +1793,17 @@ export function WebrtcMeetingPanel({
             <Button
               variant="outline"
               className="h-8 border-white/20 bg-transparent px-2 text-white hover:bg-white/10"
-              onClick={() => setPinnedTileId((current) => (current === tile.tileId ? null : tile.tileId))}
+              onClick={() =>
+                setPinnedTileId((current) =>
+                  current === tile.tileId ? null : tile.tileId,
+                )
+              }
             >
-              {isPinned ? <PinOffIcon className="size-4" /> : <PinIcon className="size-4" />}
+              {isPinned ? (
+                <PinOffIcon className="size-4" />
+              ) : (
+                <PinIcon className="size-4" />
+              )}
             </Button>
           </div>
         </div>
@@ -1762,7 +1854,9 @@ export function WebrtcMeetingPanel({
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3 sm:px-5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Badge
-            variant={getAggregateConnectionBadgeVariant(aggregateConnectionState)}
+            variant={getAggregateConnectionBadgeVariant(
+              aggregateConnectionState,
+            )}
             className="border-zinc-700 bg-zinc-900 text-zinc-200"
           >
             {aggregateConnectionState}
@@ -1822,7 +1916,8 @@ export function WebrtcMeetingPanel({
                   No participants are connected yet
                 </p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  Share the meeting link and this room will fill in as peers join.
+                  Share the meeting link and this room will fill in as peers
+                  join.
                 </p>
               </div>
             </div>
@@ -1830,7 +1925,8 @@ export function WebrtcMeetingPanel({
             <div className="space-y-3">
               {activeTileId
                 ? renderTile(
-                    mediaTiles.find((tile) => tile.tileId === activeTileId) ?? mediaTiles[0],
+                    mediaTiles.find((tile) => tile.tileId === activeTileId) ??
+                      mediaTiles[0],
                     true,
                   )
                 : null}
@@ -1845,7 +1941,8 @@ export function WebrtcMeetingPanel({
               <div>
                 {activeTileId
                   ? renderTile(
-                      mediaTiles.find((tile) => tile.tileId === activeTileId) ?? mediaTiles[0],
+                      mediaTiles.find((tile) => tile.tileId === activeTileId) ??
+                        mediaTiles[0],
                       true,
                     )
                   : null}
@@ -1870,7 +1967,9 @@ export function WebrtcMeetingPanel({
             </h2>
             <div className="flex items-center gap-2">
               <Button
-                variant={rightPanelMode === "participants" ? "default" : "outline"}
+                variant={
+                  rightPanelMode === "participants" ? "default" : "outline"
+                }
                 size="sm"
                 className="border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
                 onClick={() => setRightPanelMode("participants")}
@@ -1895,8 +1994,12 @@ export function WebrtcMeetingPanel({
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-zinc-100">{displayName}</p>
-                    <p className="text-xs text-zinc-500">You {isHost ? "(Host)" : "(Guest)"}</p>
+                    <p className="text-sm font-medium text-zinc-100">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      You {isHost ? "(Host)" : "(Guest)"}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isHost ? (
@@ -1904,20 +2007,37 @@ export function WebrtcMeetingPanel({
                         Host
                       </Badge>
                     ) : null}
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-300">
+                    <Badge
+                      variant="outline"
+                      className="border-zinc-700 text-zinc-300"
+                    >
                       You
                     </Badge>
                   </div>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
-                  {audioEnabled ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
-                  {videoEnabled ? <CameraIcon className="size-3.5" /> : <CameraOffIcon className="size-3.5" />}
-                  {isScreenSharing ? <MonitorIcon className="size-3.5" /> : <MonitorOffIcon className="size-3.5" />}
+                  {audioEnabled ? (
+                    <MicIcon className="size-3.5" />
+                  ) : (
+                    <MicOffIcon className="size-3.5" />
+                  )}
+                  {videoEnabled ? (
+                    <CameraIcon className="size-3.5" />
+                  ) : (
+                    <CameraOffIcon className="size-3.5" />
+                  )}
+                  {isScreenSharing ? (
+                    <MonitorIcon className="size-3.5" />
+                  ) : (
+                    <MonitorOffIcon className="size-3.5" />
+                  )}
                 </div>
               </div>
 
               {uniqueRemoteParticipants.length === 0 ? (
-                <p className="text-sm text-zinc-400">No remote participants yet.</p>
+                <p className="text-sm text-zinc-400">
+                  No remote participants yet.
+                </p>
               ) : (
                 uniqueRemoteParticipants.map((participant) => (
                   <div
@@ -1926,9 +2046,14 @@ export function WebrtcMeetingPanel({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <p className="text-sm font-medium text-zinc-100">{participant.displayName}</p>
+                        <p className="text-sm font-medium text-zinc-100">
+                          {participant.displayName}
+                        </p>
                         <p className="text-xs text-zinc-500">
-                          {participant.role === "HOST" ? "Host" : "Guest"} · {getParticipantConnectionLabel(participant.connectionState)}
+                          {participant.role === "HOST" ? "Host" : "Guest"} ·{" "}
+                          {getParticipantConnectionLabel(
+                            participant.connectionState,
+                          )}
                         </p>
                       </div>
                       {participant.role === "HOST" ? (
@@ -1938,9 +2063,19 @@ export function WebrtcMeetingPanel({
                       ) : null}
                     </div>
                     <div className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
-                      {participant.audioEnabled ? <MicIcon className="size-3.5" /> : <MicOffIcon className="size-3.5" />}
-                      {participant.videoEnabled ? <CameraIcon className="size-3.5" /> : <CameraOffIcon className="size-3.5" />}
-                      {remoteScreenParticipants.includes(participant.clientId) ? (
+                      {participant.audioEnabled ? (
+                        <MicIcon className="size-3.5" />
+                      ) : (
+                        <MicOffIcon className="size-3.5" />
+                      )}
+                      {participant.videoEnabled ? (
+                        <CameraIcon className="size-3.5" />
+                      ) : (
+                        <CameraOffIcon className="size-3.5" />
+                      )}
+                      {remoteScreenParticipants.includes(
+                        participant.clientId,
+                      ) ? (
                         <MonitorIcon className="size-3.5" />
                       ) : (
                         <MonitorOffIcon className="size-3.5" />
@@ -1954,7 +2089,9 @@ export function WebrtcMeetingPanel({
             <div className="space-y-2.5">
               <div className="flex items-center gap-2 text-zinc-300">
                 <MessageSquareIcon className="size-4" />
-                <p className="text-sm font-medium">In-meeting chat (WebRTC only)</p>
+                <p className="text-sm font-medium">
+                  In-meeting chat (WebRTC only)
+                </p>
               </div>
               <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950/85 p-3">
                 {chatMessages.length === 0 ? (
@@ -1982,13 +2119,18 @@ export function WebrtcMeetingPanel({
                           })}
                         </span>
                       </div>
-                      <p className="whitespace-pre-wrap wrap-break-word">{message.text}</p>
+                      <p className="whitespace-pre-wrap wrap-break-word">
+                        {message.text}
+                      </p>
                     </div>
                   ))
                 )}
                 <div ref={chatEndRef} />
               </div>
-              <form className="flex items-center gap-2" onSubmit={handleSendChat}>
+              <form
+                className="flex items-center gap-2"
+                onSubmit={handleSendChat}
+              >
                 <Input
                   value={chatInput}
                   onChange={(event) => setChatInput(event.target.value)}
@@ -2006,7 +2148,8 @@ export function WebrtcMeetingPanel({
                 </Button>
               </form>
               <p className="text-xs text-zinc-500">
-                Chat messages stay in memory only and are not stored on the server.
+                Chat messages stay in memory only and are not stored on the
+                server.
               </p>
             </div>
           )}
@@ -2015,7 +2158,9 @@ export function WebrtcMeetingPanel({
             <div className="flex items-start gap-3">
               <ShieldCheckIcon className="mt-0.5 size-4 text-emerald-400" />
               <div>
-                <p className="text-sm font-medium text-zinc-200">Signaling defaults</p>
+                <p className="text-sm font-medium text-zinc-200">
+                  Signaling defaults
+                </p>
                 <p className="mt-1 text-sm text-zinc-500">
                   This room defaults to Google STUN servers unless
                   NEXT_PUBLIC_CONSULTATION_ICE_SERVERS overrides them.
@@ -2030,7 +2175,11 @@ export function WebrtcMeetingPanel({
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-2">
           <Button
             variant={audioEnabled ? "default" : "outline"}
-            className={audioEnabled ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200" : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"}
+            className={
+              audioEnabled
+                ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+            }
             onClick={() => toggleTrack("audio")}
             disabled={!microphoneAvailable}
           >
@@ -2039,7 +2188,11 @@ export function WebrtcMeetingPanel({
           </Button>
           <Button
             variant={videoEnabled ? "default" : "outline"}
-            className={videoEnabled ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200" : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"}
+            className={
+              videoEnabled
+                ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+            }
             onClick={() => toggleTrack("video")}
             disabled={!cameraAvailable}
           >
@@ -2048,7 +2201,11 @@ export function WebrtcMeetingPanel({
           </Button>
           <Button
             variant={isScreenSharing ? "default" : "outline"}
-            className={isScreenSharing ? "bg-emerald-500 text-zinc-950 hover:bg-emerald-400" : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"}
+            className={
+              isScreenSharing
+                ? "bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
+                : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+            }
             onClick={() => void toggleScreenShare()}
           >
             {isScreenSharing ? <MonitorOffIcon /> : <MonitorIcon />}
