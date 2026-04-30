@@ -1873,46 +1873,43 @@ export function WebrtcMeetingPanel({
     };
   }, [consultation.meetingCode, consultation.status, onStatusChange, role]);
 
-  const mediaTiles = useMemo<MediaTile[]>(() => {
+  const localCameraTile = useMemo<MediaTile | null>(() => {
+    if (!localStreamRef.current) return null;
+    return {
+      tileId: "local:camera",
+      ownerClientId: clientIdRef.current,
+      ownerName: displayName,
+      ownerRole: role,
+      isLocal: true,
+      kind: "camera",
+      stream: localStreamRef.current,
+      audioEnabled,
+      videoEnabled,
+      connectionState: "connected",
+    };
+  }, [localStreamRef.current, audioEnabled, videoEnabled, displayName, role]);
+
+  const localScreenTile = useMemo<MediaTile | null>(() => {
+    if (!localScreenStreamRef.current) return null;
+    return {
+      tileId: "local:screen",
+      ownerClientId: clientIdRef.current,
+      ownerName: displayName,
+      ownerRole: role,
+      isLocal: true,
+      kind: "screen",
+      stream: localScreenStreamRef.current,
+      audioEnabled,
+      videoEnabled: true,
+      connectionState: "connected",
+    };
+  }, [localScreenStreamRef.current, audioEnabled, displayName, role]);
+
+  const remoteTiles = useMemo<MediaTile[]>(() => {
     const tiles: MediaTile[] = [];
-
-    if (localStreamRef.current) {
-      tiles.push({
-        tileId: "local:camera",
-        ownerClientId: clientIdRef.current,
-        ownerName: displayName,
-        ownerRole: role,
-        isLocal: true,
-        kind: "camera",
-        stream: localStreamRef.current,
-        audioEnabled,
-        videoEnabled,
-        connectionState: "connected",
-      });
-    }
-
-    if (localScreenStreamRef.current) {
-      tiles.push({
-        tileId: "local:screen",
-        ownerClientId: clientIdRef.current,
-        ownerName: displayName,
-        ownerRole: role,
-        isLocal: true,
-        kind: "screen",
-        stream: localScreenStreamRef.current,
-        audioEnabled,
-        videoEnabled: true,
-        connectionState: "connected",
-      });
-    }
-
     for (const participant of remoteParticipants) {
       const streamMap = remoteStreamsRef.current.get(participant.clientId);
-
-      if (!streamMap) {
-        continue;
-      }
-
+      if (!streamMap) continue;
       for (const [streamId, entry] of streamMap.entries()) {
         tiles.push({
           tileId: buildRemoteTileId(participant.clientId, streamId),
@@ -1928,30 +1925,27 @@ export function WebrtcMeetingPanel({
         });
       }
     }
+    return tiles;
+  }, [remoteParticipants]);
 
+  const mediaTiles = useMemo<MediaTile[]>(() => {
+    const tiles: MediaTile[] = [];
+    if (localCameraTile) tiles.push(localCameraTile);
+    if (localScreenTile) tiles.push(localScreenTile);
+    tiles.push(...remoteTiles);
     return tiles.sort((left, right) => {
       if (left.isLocal !== right.isLocal) {
         return left.isLocal ? -1 : 1;
       }
-
       if (left.ownerRole !== right.ownerRole) {
         return left.ownerRole === "HOST" ? -1 : 1;
       }
-
       if (left.kind !== right.kind) {
         return left.kind === "screen" ? -1 : 1;
       }
-
       return left.ownerName.localeCompare(right.ownerName);
     });
-  }, [
-    audioEnabled,
-    displayName,
-    isScreenSharing,
-    remoteParticipants,
-    role,
-    videoEnabled,
-  ]);
+  }, [localCameraTile, localScreenTile, remoteTiles]);
 
   const uniqueRemoteParticipants = useMemo(() => {
     const uniqueById = new Map<string, RemoteParticipantState>();

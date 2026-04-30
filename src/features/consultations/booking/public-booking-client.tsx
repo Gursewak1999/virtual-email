@@ -1,12 +1,10 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  CalendarRangeIcon,
   CheckCircle2Icon,
-  Clock3Icon,
   ExternalLinkIcon,
-  SparklesIcon,
+  UserRoundIcon,
   VideoIcon,
 } from "lucide-react";
 
@@ -21,6 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { DurationPicker } from "@/components/ui/duration-picker";
 import {
   formatDateTimeLabel,
   type ConsultationRecord,
@@ -31,12 +31,30 @@ interface PublicBookingClientProps {
   initialBooking: PublicBookingPayload;
 }
 
+function dateKeyToDate(dateKey: string): Date {
+  // Noon avoids edge shifts when the browser timezone differs from UTC.
+  return new Date(`${dateKey}T12:00:00`);
+}
+
+function dateToKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function PublicBookingClient({
   initialBooking,
 }: PublicBookingClientProps) {
   const [slotDays, setSlotDays] = useState(initialBooking.slotDays);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(
+    initialBooking.slotDays[0]?.dateKey ?? null,
+  );
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState<string | null>(
     initialBooking.slotDays[0]?.slots[0]?.startAt ?? null,
+  );
+  const [duration, setDuration] = useState<number>(
+    initialBooking.defaultDurationMinutes || 30,
   );
   const [form, setForm] = useState({
     attendeeName: "",
@@ -52,6 +70,113 @@ export function PublicBookingClient({
     null,
   );
 
+  const availableDateKeys = useMemo(
+    () =>
+      new Set(
+        slotDays
+          .filter((slotDay) => slotDay.slots.length > 0)
+          .map((slotDay) => slotDay.dateKey),
+      ),
+    [slotDays],
+  );
+
+  const firstAvailableSlotStartAt = useMemo(
+    () => slotDays[0]?.slots[0]?.startAt ?? null,
+    [slotDays],
+  );
+
+  const firstAvailableDate = useMemo(
+    () =>
+      slotDays[0]?.dateKey ? dateKeyToDate(slotDays[0].dateKey) : undefined,
+    [slotDays],
+  );
+
+  const selectedDate = useMemo(
+    () => (selectedDateKey ? dateKeyToDate(selectedDateKey) : undefined),
+    [selectedDateKey],
+  );
+
+  const todayStart = useMemo(() => {
+    const value = new Date();
+    value.setHours(0, 0, 0, 0);
+    return value;
+  }, []);
+
+  const calendarEndMonth = useMemo(() => {
+    const minimum = new Date(todayStart);
+    minimum.setMonth(minimum.getMonth() + 3);
+
+    const latestAvailable = slotDays
+      .map((slotDay) => dateKeyToDate(slotDay.dateKey))
+      .sort((left, right) => right.getTime() - left.getTime())[0];
+
+    return latestAvailable && latestAvailable > minimum
+      ? latestAvailable
+      : minimum;
+  }, [slotDays, todayStart]);
+
+  // Find slots for selected date
+  const slotsForSelectedDate = useMemo(() => {
+    if (!selectedDateKey) return [];
+    const slotDay = slotDays.find((d) => d.dateKey === selectedDateKey);
+    if (!slotDay) return [];
+    return slotDay.slots;
+  }, [selectedDateKey, slotDays, duration]);
+
+  useEffect(() => {
+    if (!slotDays.length) {
+      setSelectedDateKey(null);
+      setSelectedSlotStartAt(null);
+      return;
+    }
+
+    if (!selectedDateKey && slotDays[0]?.dateKey) {
+      setSelectedDateKey(slotDays[0].dateKey);
+      setSelectedSlotStartAt(firstAvailableSlotStartAt);
+      return;
+    }
+
+    if (!selectedDateKey) {
+      return;
+    }
+
+    const currentDay = slotDays.find((day) => day.dateKey === selectedDateKey);
+
+    if (!currentDay || currentDay.slots.length === 0) {
+      setSelectedDateKey(slotDays[0]?.dateKey ?? null);
+      setSelectedSlotStartAt(firstAvailableSlotStartAt);
+      return;
+    }
+
+    if (
+      !currentDay.slots.some((slot) => slot.startAt === selectedSlotStartAt)
+    ) {
+      setSelectedSlotStartAt(currentDay.slots[0]?.startAt ?? null);
+    }
+  }, [
+    firstAvailableSlotStartAt,
+    selectedDateKey,
+    selectedSlotStartAt,
+    slotDays,
+  ]);
+
+  function handleDateSelect(date: Date | undefined): void {
+    if (!date) {
+      return;
+    }
+
+    const dateKey = dateToKey(date);
+    setSelectedDateKey(dateKey);
+
+    const day = slotDays.find((slotDay) => slotDay.dateKey === dateKey);
+    if (!day || day.slots.length === 0) {
+      setSelectedSlotStartAt(null);
+      return;
+    }
+
+    setSelectedSlotStartAt(day.slots[0]?.startAt ?? null);
+  }
+
   const selectedSlot = useMemo(() => {
     for (const slotDay of slotDays) {
       for (const slot of slotDay.slots) {
@@ -63,7 +188,6 @@ export function PublicBookingClient({
         }
       }
     }
-
     return null;
   }, [selectedSlotStartAt, slotDays]);
 
@@ -89,6 +213,7 @@ export function PublicBookingClient({
         body: JSON.stringify({
           ...form,
           scheduledAt: selectedSlot.startAt,
+          durationMinutes: duration,
         }),
       });
       const payload = (await response.json()) as {
@@ -115,7 +240,9 @@ export function PublicBookingClient({
       );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Unable to book this consultation",
+        error instanceof Error
+          ? error.message
+          : "Unable to book this consultation",
       );
     } finally {
       setBusy(false);
@@ -124,7 +251,7 @@ export function PublicBookingClient({
 
   if (confirmation) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_35%),linear-gradient(180deg,_#f8fbff_0%,_#eef6ff_100%)] px-4 py-10 text-zinc-900">
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_35%),linear-gradient(180deg,#f8fbff_0%,#eef6ff_100%)] px-4 py-10 text-zinc-900">
         <div className="mx-auto max-w-4xl">
           <Card className="overflow-hidden border-emerald-200 bg-white/90 shadow-xl shadow-emerald-100/50">
             <CardHeader className="border-b border-emerald-100 bg-emerald-50/70">
@@ -133,7 +260,8 @@ export function PublicBookingClient({
                 Booking Confirmed
               </div>
               <CardTitle className="text-2xl">
-                You&apos;re booked for {formatDateTimeLabel(confirmation.scheduledAt)}
+                You&apos;re booked for{" "}
+                {formatDateTimeLabel(confirmation.scheduledAt)}
               </CardTitle>
               <CardDescription className="max-w-2xl">
                 Your consultation room is ready. Save the meeting link below and
@@ -194,57 +322,16 @@ export function PublicBookingClient({
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.12),_transparent_28%),linear-gradient(180deg,_#fcfeff_0%,_#f3f7fb_100%)] px-4 py-8 text-zinc-900">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.12),transparent_28%),linear-gradient(180deg,#fcfeff_0%,#f3f7fb_100%)] px-4 py-8 text-zinc-900">
       <div className="mx-auto max-w-6xl space-y-6">
-        <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-xl shadow-sky-100/50 backdrop-blur">
-            <div className="inline-flex items-center gap-2 rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
-              <SparklesIcon className="size-3.5" />
-              Public Booking
-            </div>
-            <h1 className="mt-4 text-4xl leading-tight font-semibold tracking-tight text-zinc-950">
-              Book a private consultation in a few clicks.
-            </h1>
-            <p className="mt-4 max-w-xl text-base text-zinc-600">
-              Pick the time that works best, share your contact details, and
-              receive an instant meeting link for your appointment.
-            </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4">
-                <CalendarRangeIcon className="size-4 text-sky-600" />
-                <p className="mt-3 text-sm font-medium text-zinc-900">
-                  Flexible booking
-                </p>
-                <p className="mt-1 text-sm text-zinc-600">
-                  Live availability pulled directly from the host schedule.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4">
-                <Clock3Icon className="size-4 text-emerald-600" />
-                <p className="mt-3 text-sm font-medium text-zinc-900">
-                  {initialBooking.defaultDurationMinutes}-minute sessions
-                </p>
-                <p className="mt-1 text-sm text-zinc-600">
-                  All time slots are shown in {initialBooking.timezone}.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4">
-                <VideoIcon className="size-4 text-violet-600" />
-                <p className="mt-3 text-sm font-medium text-zinc-900">
-                  Meeting link included
-                </p>
-                <p className="mt-1 text-sm text-zinc-600">
-                  Your private room is created automatically after booking.
-                </p>
-              </div>
-            </div>
-          </div>
-
+        <section className="grid gap-6 lg:grid-cols-2">
           <Card className="border-zinc-200 bg-white/88 shadow-xl shadow-zinc-200/40">
             <CardHeader>
               <CardTitle>Reserve Your Slot</CardTitle>
-              <CardDescription>{statusMessage}</CardDescription>
+              <CardDescription>
+                Choose your duration and date. Calendar availability is loaded
+                for at least 3 months.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {errorMessage ? (
@@ -253,7 +340,109 @@ export function PublicBookingClient({
                 </div>
               ) : null}
 
+              <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-sky-900">
+                <div className="flex items-center gap-2 font-semibold text-sky-800">
+                  <UserRoundIcon className="size-4" />
+                  Host Details
+                </div>
+                <div className="mt-1 flex flex-col gap-1">
+                  <span>Host: {initialBooking.hostName}</span>
+                  <span>Timezone: {initialBooking.timezone}</span>
+                  <span>
+                    Default duration: {initialBooking.defaultDurationMinutes}{" "}
+                    min
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-5">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500 mb-1">
+                    Pick a Date
+                  </p>
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    className="w-full [&_.rdp-month]:w-full"
+                    fromDate={new Date()}
+                    startMonth={todayStart}
+                    endMonth={calendarEndMonth}
+                    modifiers={{
+                      unavailable: (date) => {
+                        const dayStart = new Date(date);
+                        dayStart.setHours(0, 0, 0, 0);
+                        if (dayStart < todayStart) {
+                          return false;
+                        }
+                        return !availableDateKeys.has(dateToKey(date));
+                      },
+                    }}
+                    modifiersClassNames={{
+                      unavailable:
+                        "text-zinc-500 opacity-75 [&_button]:line-through [&_button]:decoration-2 [&_button]:decoration-rose-500",
+                    }}
+                    disabled={(date) => {
+                      const dayStart = new Date(date);
+                      dayStart.setHours(0, 0, 0, 0);
+
+                      if (dayStart < todayStart) {
+                        return true;
+                      }
+
+                      return !availableDateKeys.has(dateToKey(date));
+                    }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-zinc-200 bg-white/88 shadow-xl shadow-zinc-200/40">
+            <CardHeader>
+              <CardTitle>Availability</CardTitle>
+              <CardDescription>{statusMessage}</CardDescription>
+            </CardHeader>
+            <CardContent>
               <form className="space-y-4" onSubmit={handleBookingSubmit}>
+                <div className="hidden" aria-hidden="true">
+                  <DurationPicker
+                    value={duration}
+                    onChange={setDuration}
+                    options={[30, 45, 60]}
+                  />
+                </div>
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4 mb-2">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500 mb-1">
+                    Available Times
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {slotsForSelectedDate.length === 0 ? (
+                      <span className="text-zinc-400 italic">
+                        No slots for this date/duration.
+                      </span>
+                    ) : (
+                      slotsForSelectedDate.map((slot) => {
+                        const selected = slot.startAt === selectedSlotStartAt;
+                        return (
+                          <button
+                            key={slot.startAt}
+                            type="button"
+                            onClick={() => setSelectedSlotStartAt(slot.startAt)}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                              selected
+                                ? "border-sky-600 bg-sky-600 text-white"
+                                : "border-zinc-200 bg-white text-zinc-700 hover:border-sky-300 hover:text-sky-700",
+                            )}
+                          >
+                            {slot.timeLabel}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
                     Selected Slot
@@ -261,10 +450,9 @@ export function PublicBookingClient({
                   <p className="mt-2 text-base font-medium text-zinc-900">
                     {selectedSlot
                       ? formatDateTimeLabel(selectedSlot.startAt)
-                      : "Choose a slot below"}
+                      : "Choose a date and time"}
                   </p>
                 </div>
-
                 <div className="space-y-1.5">
                   <Label htmlFor="booking-name">Full Name</Label>
                   <Input
@@ -280,7 +468,6 @@ export function PublicBookingClient({
                     required
                   />
                 </div>
-
                 <div className="space-y-1.5">
                   <Label htmlFor="booking-email">Email</Label>
                   <Input
@@ -297,7 +484,6 @@ export function PublicBookingClient({
                     required
                   />
                 </div>
-
                 <div className="space-y-1.5">
                   <Label htmlFor="booking-phone">Phone</Label>
                   <Input
@@ -312,7 +498,6 @@ export function PublicBookingClient({
                     placeholder="+1 647 555 0199"
                   />
                 </div>
-
                 <Button type="submit" disabled={busy || !selectedSlot}>
                   {busy ? "Booking..." : "Book Consultation"}
                 </Button>
@@ -320,61 +505,6 @@ export function PublicBookingClient({
             </CardContent>
           </Card>
         </section>
-
-        <Card className="border-zinc-200 bg-white/90 shadow-xl shadow-zinc-200/40">
-          <CardHeader>
-            <CardTitle>Available Time Slots</CardTitle>
-            <CardDescription>
-              Choose a day and time below. Booked or blocked times are hidden
-              automatically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {slotDays.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-sm text-zinc-600">
-                No booking slots are available right now. Please check back soon.
-              </p>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {slotDays.map((slotDay) => (
-                  <div
-                    key={slotDay.dateKey}
-                    className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4"
-                  >
-                    <div className="mb-3">
-                      <p className="text-sm font-semibold text-zinc-900">
-                        {slotDay.dateLabel}
-                      </p>
-                      <p className="text-xs text-zinc-500">{slotDay.dateKey}</p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {slotDay.slots.map((slot) => {
-                        const selected = slot.startAt === selectedSlotStartAt;
-
-                        return (
-                          <button
-                            key={slot.startAt}
-                            type="button"
-                            onClick={() => setSelectedSlotStartAt(slot.startAt)}
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                              selected
-                                ? "border-sky-600 bg-sky-600 text-white"
-                                : "border-zinc-200 bg-white text-zinc-700 hover:border-sky-300 hover:text-sky-700",
-                            )}
-                          >
-                            {slot.timeLabel}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </main>
   );

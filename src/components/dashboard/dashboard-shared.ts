@@ -1,4 +1,5 @@
 import {
+  CalendarIcon,
   CalendarDaysIcon,
   InboxIcon,
   UsersIcon,
@@ -11,6 +12,7 @@ export type DashboardTab =
   | "inboxes"
   | "users"
   | "consultations"
+  | "callendar"
   | "activity"
   | "settings";
 export type MailFolder = "inbox" | "sent";
@@ -98,6 +100,12 @@ export const navTabs: Array<{
     title: "Consultations",
     icon: CalendarDaysIcon,
     href: "/dashboard/consultations",
+  },
+  {
+    id: "callendar",
+    title: "Callendar",
+    icon: CalendarIcon,
+    href: "/dashboard/callendar",
   },
   {
     id: "activity",

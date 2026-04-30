@@ -7,7 +7,10 @@ import {
   CopyIcon,
   ExternalLinkIcon,
   LinkIcon,
-  TimerResetIcon,
+  PlusIcon,
+  SearchIcon,
+  Settings2Icon,
+  UserRoundIcon,
   VideoIcon,
   XIcon,
 } from "lucide-react";
@@ -21,8 +24,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   DAY_OPTIONS,
   DEFAULT_AVAILABILITY,
@@ -57,6 +74,8 @@ const emptyConsultationForm = {
   scheduledTime: "",
 };
 
+const PAGE_SIZE = 8;
+
 function getStatusBadgeVariant(status: ConsultationStatus) {
   switch (status) {
     case "PENDING":
@@ -71,6 +90,28 @@ function getStatusBadgeVariant(status: ConsultationStatus) {
   }
 }
 
+function matchesConsultationSearch(
+  consultation: ConsultationRecord,
+  searchTerm: string,
+): boolean {
+  if (!searchTerm) {
+    return true;
+  }
+
+  const haystack = [
+    consultation.attendeeName,
+    consultation.attendeeEmail,
+    consultation.attendeePhone || "",
+    consultation.meetingCode,
+    consultation.status,
+    formatDateTimeLabel(consultation.scheduledAt),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(searchTerm);
+}
+
 export function ConsultationsDashboardClient() {
   const [consultations, setConsultations] = useState<ConsultationRecord[]>([]);
   const [hostProfile, setHostProfile] =
@@ -82,11 +123,22 @@ export function ConsultationsDashboardClient() {
   >([]);
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedLabel, setNewBlockedLabel] = useState("");
-  const [consultationForm, setConsultationForm] = useState(emptyConsultationForm);
+  const [consultationForm, setConsultationForm] = useState(
+    emptyConsultationForm,
+  );
   const [loading, setLoading] = useState(true);
   const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState("Loading consultations...");
+  const [statusMessage, setStatusMessage] = useState(
+    "Loading consultations...",
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [othersPage, setOthersPage] = useState(1);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [availabilitySheetOpen, setAvailabilitySheetOpen] = useState(false);
+  const [selectedConsultation, setSelectedConsultation] =
+    useState<ConsultationRecord | null>(null);
 
   async function loadConsultations(): Promise<void> {
     setLoading(true);
@@ -122,6 +174,11 @@ export function ConsultationsDashboardClient() {
     void loadConsultations();
   }, []);
 
+  useEffect(() => {
+    setUpcomingPage(1);
+    setOthersPage(1);
+  }, [searchTerm]);
+
   const metrics = useMemo(() => {
     const pending = consultations.filter(
       (consultation) => consultation.status === "PENDING",
@@ -141,6 +198,51 @@ export function ConsultationsDashboardClient() {
       expired,
     };
   }, [consultations]);
+
+  const filteredConsultations = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return consultations.filter((consultation) =>
+      matchesConsultationSearch(consultation, normalizedSearch),
+    );
+  }, [consultations, searchTerm]);
+
+  const { upcomingConsultations, otherConsultations } = useMemo(() => {
+    const now = Date.now();
+
+    const upcoming = filteredConsultations.filter(
+      (consultation) =>
+        consultation.status === "PENDING" &&
+        new Date(consultation.scheduledAt).getTime() >= now,
+    );
+
+    const others = filteredConsultations.filter(
+      (consultation) => !upcoming.some((entry) => entry.id === consultation.id),
+    );
+
+    return {
+      upcomingConsultations: upcoming,
+      otherConsultations: others,
+    };
+  }, [filteredConsultations]);
+
+  const upcomingPageCount = Math.max(
+    1,
+    Math.ceil(upcomingConsultations.length / PAGE_SIZE),
+  );
+  const othersPageCount = Math.max(
+    1,
+    Math.ceil(otherConsultations.length / PAGE_SIZE),
+  );
+
+  const upcomingVisible = useMemo(() => {
+    const start = (upcomingPage - 1) * PAGE_SIZE;
+    return upcomingConsultations.slice(start, start + PAGE_SIZE);
+  }, [upcomingConsultations, upcomingPage]);
+
+  const othersVisible = useMemo(() => {
+    const start = (othersPage - 1) * PAGE_SIZE;
+    return otherConsultations.slice(start, start + PAGE_SIZE);
+  }, [otherConsultations, othersPage]);
 
   async function copyToClipboard(value: string, label: string): Promise<void> {
     try {
@@ -175,7 +277,9 @@ export function ConsultationsDashboardClient() {
     }
 
     setBlockedDates((current) => {
-      if (current.some((blockedDate) => blockedDate.dateKey === newBlockedDate)) {
+      if (
+        current.some((blockedDate) => blockedDate.dateKey === newBlockedDate)
+      ) {
         return current;
       }
 
@@ -189,7 +293,9 @@ export function ConsultationsDashboardClient() {
     });
     setNewBlockedDate("");
     setNewBlockedLabel("");
-    setStatusMessage("Blocked date added locally. Save availability to publish it.");
+    setStatusMessage(
+      "Blocked date added locally. Save availability to publish it.",
+    );
     setErrorMessage(null);
   }
 
@@ -197,7 +303,9 @@ export function ConsultationsDashboardClient() {
     setBlockedDates((current) =>
       current.filter((blockedDate) => blockedDate.dateKey !== dateKey),
     );
-    setStatusMessage("Blocked date removed locally. Save availability to publish it.");
+    setStatusMessage(
+      "Blocked date removed locally. Save availability to publish it.",
+    );
     setErrorMessage(null);
   }
 
@@ -227,11 +335,14 @@ export function ConsultationsDashboardClient() {
       }
 
       setConsultationForm(emptyConsultationForm);
+      setCreateDialogOpen(false);
       setStatusMessage("Consultation created and meeting link generated.");
       await loadConsultations();
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to create consultation",
+        error instanceof Error
+          ? error.message
+          : "Failed to create consultation",
       );
     } finally {
       setBusyAction(null);
@@ -263,6 +374,7 @@ export function ConsultationsDashboardClient() {
       setAvailability(payload.hostProfile.availability);
       setBlockedDates(payload.hostProfile.blockedDates);
       setStatusMessage("Availability saved for the public booking page.");
+      setAvailabilitySheetOpen(false);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to save availability",
@@ -304,6 +416,11 @@ export function ConsultationsDashboardClient() {
             : consultation,
         ),
       );
+
+      if (selectedConsultation?.id === consultationId) {
+        setSelectedConsultation(payload.consultation);
+      }
+
       setStatusMessage(
         status === "COMPLETED"
           ? "Consultation marked as completed."
@@ -311,7 +428,9 @@ export function ConsultationsDashboardClient() {
       );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to update consultation",
+        error instanceof Error
+          ? error.message
+          : "Failed to update consultation",
       );
     } finally {
       setBusyAction(null);
@@ -321,34 +440,48 @@ export function ConsultationsDashboardClient() {
   return (
     <div className="space-y-6">
       {errorMessage ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-zinc-200 bg-white/85 p-5 shadow-sm">
+      <div className="border border-zinc-200 bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+            <div className="inline-flex items-center gap-2 border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700">
               <VideoIcon className="size-3.5" />
               Consultations
             </div>
             <h1 className="text-2xl font-semibold text-zinc-900">
-              Meetings, availability, and public booking
+              Consultation Management
             </h1>
             <p className="max-w-2xl text-sm text-zinc-600">
-              Create consultation records, generate meeting links instantly, and
-              manage the public booking page your guests can use on their own.
+              Default view shows upcoming consultations first with separate
+              history, searchable results, and paginated records.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <PlusIcon />
+              Add Consultation
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAvailabilitySheetOpen(true)}
+            >
+              <Settings2Icon />
+              Availability Settings
+            </Button>
             {hostProfile?.bookingUrl ? (
               <>
                 <Button
                   variant="outline"
                   onClick={() =>
-                    void copyToClipboard(hostProfile.bookingUrl || "", "Booking link")
+                    void copyToClipboard(
+                      hostProfile.bookingUrl || "",
+                      "Booking link",
+                    )
                   }
                 >
                   <CopyIcon />
@@ -369,25 +502,37 @@ export function ConsultationsDashboardClient() {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-4">
-          <Card size="sm" className="bg-sky-50/80 ring-sky-100">
+          <Card
+            size="sm"
+            className="rounded-none bg-sky-50/80 shadow-none ring-sky-100"
+          >
             <CardHeader>
               <CardDescription>Pending</CardDescription>
               <CardTitle>{metrics.pending}</CardTitle>
             </CardHeader>
           </Card>
-          <Card size="sm" className="bg-emerald-50/80 ring-emerald-100">
+          <Card
+            size="sm"
+            className="rounded-none bg-emerald-50/80 shadow-none ring-emerald-100"
+          >
             <CardHeader>
               <CardDescription>Completed</CardDescription>
               <CardTitle>{metrics.completed}</CardTitle>
             </CardHeader>
           </Card>
-          <Card size="sm" className="bg-amber-50/80 ring-amber-100">
+          <Card
+            size="sm"
+            className="rounded-none bg-amber-50/80 shadow-none ring-amber-100"
+          >
             <CardHeader>
               <CardDescription>Expired / Cancelled</CardDescription>
               <CardTitle>{metrics.expired}</CardTitle>
             </CardHeader>
           </Card>
-          <Card size="sm" className="bg-zinc-50 ring-zinc-200">
+          <Card
+            size="sm"
+            className="rounded-none bg-zinc-50 shadow-none ring-zinc-200"
+          >
             <CardHeader>
               <CardDescription>Status</CardDescription>
               <CardTitle className="text-sm">{statusMessage}</CardTitle>
@@ -396,19 +541,285 @@ export function ConsultationsDashboardClient() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+      <Card className="rounded-none shadow-none">
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <LinkIcon className="size-4 text-violet-600" />
+                Consultation Records
+              </CardTitle>
+              <CardDescription>
+                Click any consultation to view details. Upcoming consultations
+                are separated for quick access.
+              </CardDescription>
+            </div>
+
+            <div className="w-full max-w-sm">
+              <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="pl-9"
+                  placeholder="Search name, email, status, code..."
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          {loading ? (
+            <p className="border border-dashed border-zinc-300 bg-white px-3 py-4 text-sm text-zinc-600">
+              Loading consultation records...
+            </p>
+          ) : (
+            <>
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                    Upcoming Consultations ({upcomingConsultations.length})
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Page {upcomingPage} of {upcomingPageCount}
+                  </p>
+                </div>
+
+                {upcomingVisible.length === 0 ? (
+                  <p className="border border-dashed border-zinc-300 bg-white px-3 py-4 text-sm text-zinc-600">
+                    No upcoming consultations found.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingVisible.map((consultation) => {
+                      const actionKey = consultation.id;
+
+                      return (
+                        <article
+                          key={consultation.id}
+                          className="cursor-pointer border border-zinc-200 bg-white p-4 transition hover:border-zinc-300"
+                          onClick={() => setSelectedConsultation(consultation)}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base font-semibold text-zinc-900">
+                                  {consultation.attendeeName}
+                                </h3>
+                                <Badge
+                                  variant={getStatusBadgeVariant(
+                                    consultation.status,
+                                  )}
+                                >
+                                  {formatConsultationStatus(
+                                    consultation.status,
+                                  )}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-zinc-600">
+                                {consultation.attendeeEmail}
+                                {consultation.attendeePhone
+                                  ? ` · ${consultation.attendeePhone}`
+                                  : ""}
+                              </p>
+                              <p className="text-sm font-medium text-zinc-800">
+                                {formatDateTimeLabel(consultation.scheduledAt)}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="outline"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void copyToClipboard(
+                                    consultation.meetingUrl,
+                                    "Meeting link",
+                                  );
+                                }}
+                              >
+                                <CopyIcon />
+                                Copy Link
+                              </Button>
+                              <Button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleStatusUpdate(
+                                    actionKey,
+                                    "COMPLETED",
+                                  );
+                                }}
+                                disabled={
+                                  busyAction === `completed-${actionKey}`
+                                }
+                              >
+                                <CheckCheckIcon />
+                                Complete
+                              </Button>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setUpcomingPage((current) => Math.max(1, current - 1))
+                    }
+                    disabled={upcomingPage <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setUpcomingPage((current) =>
+                        Math.min(upcomingPageCount, current + 1),
+                      )
+                    }
+                    disabled={upcomingPage >= upcomingPageCount}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </section>
+
+              <section className="space-y-3 border-t pt-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-600">
+                    Other Consultations ({otherConsultations.length})
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Page {othersPage} of {othersPageCount}
+                  </p>
+                </div>
+
+                {othersVisible.length === 0 ? (
+                  <p className="border border-dashed border-zinc-300 bg-white px-3 py-4 text-sm text-zinc-600">
+                    No other consultations found.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {othersVisible.map((consultation) => {
+                      const actionKey = consultation.id;
+
+                      return (
+                        <article
+                          key={consultation.id}
+                          className="cursor-pointer border border-zinc-200 bg-white p-4 transition hover:border-zinc-300"
+                          onClick={() => setSelectedConsultation(consultation)}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base font-semibold text-zinc-900">
+                                  {consultation.attendeeName}
+                                </h3>
+                                <Badge
+                                  variant={getStatusBadgeVariant(
+                                    consultation.status,
+                                  )}
+                                >
+                                  {formatConsultationStatus(
+                                    consultation.status,
+                                  )}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-zinc-600">
+                                {consultation.attendeeEmail}
+                                {consultation.attendeePhone
+                                  ? ` · ${consultation.attendeePhone}`
+                                  : ""}
+                              </p>
+                              <p className="text-sm text-zinc-700">
+                                {formatDateTimeLabel(consultation.scheduledAt)}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <a
+                                className={cn(
+                                  buttonVariants({ variant: "outline" }),
+                                )}
+                                href={consultation.meetingUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <ExternalLinkIcon />
+                                Open Meeting
+                              </a>
+                              {consultation.status === "PENDING" ? (
+                                <Button
+                                  variant="outline"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleStatusUpdate(
+                                      actionKey,
+                                      "CANCELLED",
+                                    );
+                                  }}
+                                  disabled={
+                                    busyAction === `cancelled-${actionKey}`
+                                  }
+                                >
+                                  Cancel
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setOthersPage((current) => Math.max(1, current - 1))
+                    }
+                    disabled={othersPage <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setOthersPage((current) =>
+                        Math.min(othersPageCount, current + 1),
+                      )
+                    }
+                    disabled={othersPage >= othersPageCount}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </section>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Drawer open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
               <CalendarDaysIcon className="size-4 text-sky-600" />
-              Create Consultation
-            </CardTitle>
-            <CardDescription>
-              Add a consultation manually and generate a private meeting room in
-              the same step.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+              Add Consultation
+            </DrawerTitle>
+            <DrawerDescription>
+              Create a consultation record and generate a private meeting room.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="space-y-4 p-4 pt-0">
             <form className="space-y-4" onSubmit={handleCreateConsultation}>
               <div className="space-y-1.5">
                 <Label htmlFor="consultation-name">Guest Name</Label>
@@ -494,13 +905,6 @@ export function ConsultationsDashboardClient() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-3 py-3 text-sm text-zinc-600">
-                Each consultation starts as <strong>Pending</strong>, gets a
-                meeting link immediately, and moves to <strong>Expired</strong>{" "}
-                automatically after its scheduled window ends unless you mark it
-                completed first.
-              </div>
-
               <Button
                 type="submit"
                 disabled={busyAction === "create-consultation"}
@@ -510,21 +914,24 @@ export function ConsultationsDashboardClient() {
                   : "Create Consultation"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </DrawerContent>
+      </Drawer>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TimerResetIcon className="size-4 text-emerald-600" />
-              Availability and Blackout Dates
-            </CardTitle>
-            <CardDescription>
-              These settings control which slots appear on your public booking
-              page. Manual consultations can still be added outside them.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
+      <Sheet
+        open={availabilitySheetOpen}
+        onOpenChange={setAvailabilitySheetOpen}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>Availability Settings</SheetTitle>
+            <SheetDescription>
+              Configure booking availability and blocked dates. Hidden by
+              default and opened from the settings button.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-5 overflow-y-auto p-4">
             <div className="space-y-3">
               {availability.map((day) => {
                 const dayLabel =
@@ -534,7 +941,7 @@ export function ConsultationsDashboardClient() {
                 return (
                   <div
                     key={day.dayOfWeek}
-                    className="rounded-xl border border-zinc-200 bg-white/80 px-3 py-3"
+                    className="border border-zinc-200 bg-white px-3 py-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <label className="flex items-center gap-2 text-sm font-medium text-zinc-900">
@@ -581,7 +988,7 @@ export function ConsultationsDashboardClient() {
               })}
             </div>
 
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
+            <div className="border border-zinc-200 bg-white p-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="blocked-date">Blocked Date</Label>
@@ -592,7 +999,7 @@ export function ConsultationsDashboardClient() {
                     onChange={(event) => setNewBlockedDate(event.target.value)}
                   />
                 </div>
-                <div className="min-w-[220px] flex-1 space-y-1.5">
+                <div className="min-w-55 flex-1 space-y-1.5">
                   <Label htmlFor="blocked-label">Reason</Label>
                   <Input
                     id="blocked-label"
@@ -601,21 +1008,23 @@ export function ConsultationsDashboardClient() {
                     placeholder="Vacation, holiday, conference..."
                   />
                 </div>
-                <Button type="button" variant="outline" onClick={handleAddBlockedDate}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddBlockedDate}
+                >
                   Add Blocked Date
                 </Button>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {blockedDates.length === 0 ? (
-                  <p className="text-sm text-zinc-500">
-                    No blocked dates yet.
-                  </p>
+                  <p className="text-sm text-zinc-500">No blocked dates yet.</p>
                 ) : (
                   blockedDates.map((blockedDate) => (
                     <div
                       key={blockedDate.dateKey}
-                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm text-zinc-700"
+                      className="inline-flex items-center gap-2 border border-zinc-200 bg-white px-3 py-1 text-sm text-zinc-700"
                     >
                       <span>
                         {blockedDate.dateKey}
@@ -643,135 +1052,124 @@ export function ConsultationsDashboardClient() {
                 ? "Saving..."
                 : "Save Availability"}
             </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <LinkIcon className="size-4 text-violet-600" />
-                Consultation Records
-              </CardTitle>
-              <CardDescription>
-                Manage current consultations, mark them complete, and jump into
-                meeting rooms.
-              </CardDescription>
-            </div>
-
-            {hostProfile?.bookingUrl ? (
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
-                Public booking page:{" "}
-                <a
-                  className="font-medium text-sky-700 underline"
-                  href={hostProfile.bookingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {hostProfile.bookingPath}
-                </a>
-              </div>
-            ) : null}
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-              Loading consultation records...
-            </p>
-          ) : consultations.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-              No consultations yet. Create one above or share your booking page
-              to start receiving meetings.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {consultations.map((consultation) => {
-                const actionKey = consultation.id;
+        </SheetContent>
+      </Sheet>
 
-                return (
-                  <article
-                    key={consultation.id}
-                    className="rounded-2xl border border-zinc-200 bg-white/85 p-4 shadow-sm"
+      <Sheet
+        open={Boolean(selectedConsultation)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedConsultation(null);
+          }
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-lg">
+          {selectedConsultation ? (
+            <>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <UserRoundIcon className="size-4" />
+                  Consultation Details
+                </SheetTitle>
+                <SheetDescription>
+                  Detailed view for {selectedConsultation.attendeeName}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-4 p-4">
+                <div className="border border-zinc-200 bg-white p-3 text-sm">
+                  <p className="font-medium text-zinc-900">
+                    {selectedConsultation.attendeeName}
+                  </p>
+                  <p className="text-zinc-700">
+                    {selectedConsultation.attendeeEmail}
+                  </p>
+                  <p className="text-zinc-600">
+                    {selectedConsultation.attendeePhone || "No phone"}
+                  </p>
+                </div>
+
+                <div className="space-y-1 text-sm text-zinc-700">
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    {formatConsultationStatus(selectedConsultation.status)}
+                  </p>
+                  <p>
+                    <strong>Scheduled:</strong>{" "}
+                    {formatDateTimeLabel(selectedConsultation.scheduledAt)}
+                  </p>
+                  <p>
+                    <strong>Ends:</strong>{" "}
+                    {formatDateTimeLabel(selectedConsultation.endsAt)}
+                  </p>
+                  <p>
+                    <strong>Meeting code:</strong>{" "}
+                    {selectedConsultation.meetingCode}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      void copyToClipboard(
+                        selectedConsultation.meetingUrl,
+                        "Meeting link",
+                      )
+                    }
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold text-zinc-900">
-                            {consultation.attendeeName}
-                          </h3>
-                          <Badge
-                            variant={getStatusBadgeVariant(consultation.status)}
-                          >
-                            {formatConsultationStatus(consultation.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-zinc-600">
-                          {consultation.attendeeEmail}
-                          {consultation.attendeePhone
-                            ? ` · ${consultation.attendeePhone}`
-                            : ""}
-                        </p>
-                        <p className="text-sm text-zinc-700">
-                          {formatDateTimeLabel(consultation.scheduledAt)}
-                        </p>
-                      </div>
+                    <CopyIcon />
+                    Copy Link
+                  </Button>
+                  <a
+                    className={cn(buttonVariants({ variant: "outline" }))}
+                    href={selectedConsultation.meetingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLinkIcon />
+                    Open Meeting
+                  </a>
+                </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            void copyToClipboard(
-                              consultation.meetingUrl,
-                              "Meeting link",
-                            )
-                          }
-                        >
-                          <CopyIcon />
-                          Copy Meeting Link
-                        </Button>
-                        <a
-                          className={cn(buttonVariants({ variant: "outline" }))}
-                          href={consultation.meetingUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <ExternalLinkIcon />
-                          Open Meeting
-                        </a>
-                        {consultation.status === "PENDING" ? (
-                          <>
-                            <Button
-                              onClick={() =>
-                                void handleStatusUpdate(actionKey, "COMPLETED")
-                              }
-                              disabled={busyAction === `completed-${actionKey}`}
-                            >
-                              <CheckCheckIcon />
-                              Complete
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() =>
-                                void handleStatusUpdate(actionKey, "CANCELLED")
-                              }
-                              disabled={busyAction === `cancelled-${actionKey}`}
-                            >
-                              Cancel
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {selectedConsultation.status === "PENDING" ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() =>
+                        void handleStatusUpdate(
+                          selectedConsultation.id,
+                          "COMPLETED",
+                        )
+                      }
+                      disabled={
+                        busyAction === `completed-${selectedConsultation.id}`
+                      }
+                    >
+                      <CheckCheckIcon />
+                      Mark Complete
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        void handleStatusUpdate(
+                          selectedConsultation.id,
+                          "CANCELLED",
+                        )
+                      }
+                      disabled={
+                        busyAction === `cancelled-${selectedConsultation.id}`
+                      }
+                    >
+                      Cancel Consultation
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
