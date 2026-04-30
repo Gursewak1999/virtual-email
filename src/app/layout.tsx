@@ -35,7 +35,7 @@ export default function RootLayout({
       lang="en"
       className={`${manrope.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

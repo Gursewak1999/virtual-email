@@ -103,7 +103,7 @@ export const navTabs: Array<{
   },
   {
     id: "callendar",
-    title: "Callendar",
+    title: "Calendar",
     icon: CalendarIcon,
     href: "/dashboard/callendar",
   },

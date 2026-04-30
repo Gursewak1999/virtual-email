@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  ArchiveIcon,
+  AtSignIcon,
   CheckCheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -9,8 +11,12 @@ import {
   LogOutIcon,
   MailIcon,
   MoreHorizontalIcon,
+  PaperclipIcon,
+  PlusIcon,
   RefreshCwIcon,
   SearchIcon,
+  SendHorizontalIcon,
+  StarIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react";
@@ -24,8 +30,10 @@ import {
   formatTimestamp,
   getChatMessageBody,
   getEmailParticipants,
+  type Mailbox,
   USERS_PAGE_SIZE,
 } from "@/components/dashboard/dashboard-shared";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,16 +60,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarInput,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import {
   Table,
   TableBody,
   TableCell,
@@ -70,9 +68,112 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildSnippet } from "@/lib/email-helpers";
+import { cn } from "@/lib/utils";
 
 interface DashboardClientProps {
   tab: DashboardTab;
+}
+
+const INBOX_AVATAR_TONES = [
+  "bg-violet-500/85 text-white",
+  "bg-sky-500/85 text-white",
+  "bg-emerald-500/85 text-white",
+  "bg-amber-500/85 text-[#101319]",
+  "bg-rose-500/85 text-white",
+  "bg-indigo-500/85 text-white",
+] as const;
+
+const MAIL_LABELS = [
+  { label: "Projects", color: "bg-violet-500" },
+  { label: "Clients", color: "bg-emerald-500" },
+  { label: "Personal", color: "bg-orange-500" },
+  { label: "Invoices", color: "bg-sky-500" },
+  { label: "Travel", color: "bg-pink-500" },
+] as const;
+
+function getTone(seed: string): (typeof INBOX_AVATAR_TONES)[number] {
+  const hash = Array.from(seed).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+
+  return INBOX_AVATAR_TONES[hash % INBOX_AVATAR_TONES.length];
+}
+
+function getInitials(value: string): string {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return "IR";
+  }
+
+  if (normalized.includes("@")) {
+    return normalized
+      .split("@")[0]
+      .split(/[._\-\s]/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("");
+  }
+
+  return normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function splitAddress(value: string): { name: string; email: string | null } {
+  const match = value.match(/^(.*?)<([^>]+)>$/);
+
+  if (match) {
+    const name = match[1]?.trim() || match[2]?.trim();
+    return {
+      name,
+      email: match[2]?.trim() || null,
+    };
+  }
+
+  return {
+    name: value.trim(),
+    email: value.includes("@") ? value.trim() : null,
+  };
+}
+
+function getMailboxName(mailbox: Mailbox): string {
+  return mailbox.label || mailbox.emailAddress;
+}
+
+function formatMessageTimestamp(value: string): string {
+  const date = new Date(value);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatTimeOnly(value: string): string {
+  return new Date(value).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function DashboardClient({ tab }: DashboardClientProps) {
@@ -135,11 +236,46 @@ export function DashboardClient({ tab }: DashboardClientProps) {
     handleCopyPassword,
     handleReply,
     openCreateUserSheet,
+    totalUnread,
   } = useDashboardState();
   const router = useRouter();
 
+  const unreadEmailCount = filteredEmails.filter((email) => !email.isRead).length;
+  const attachmentEmailCount = filteredEmails.filter(
+    (email) => email.attachments.length > 0,
+  ).length;
+  const mentionEmailCount = filteredEmails.filter((email) =>
+    [email.subject, email.preview, email.textBody || "", email.htmlBody || ""]
+      .join(" ")
+      .includes("@"),
+  ).length;
+  const totalMessageCount =
+    dashboardMetrics.totalInbox + dashboardMetrics.totalSent;
+  const queueVolumePercent =
+    totalMessageCount === 0
+      ? 8
+      : Math.min(100, Math.max(16, (totalMessageCount / 120) * 100));
+  const selectedMailboxTitle = selectedMailbox
+    ? getMailboxName(selectedMailbox)
+    : "Choose a mailbox";
+  const selectedSender = selectedEmail ? splitAddress(selectedEmail.from) : null;
+  const selectedRecipients = selectedEmail
+    ? [...selectedEmail.to, ...selectedEmail.cc].filter(Boolean)
+    : [];
+  const smartViews = [
+    { label: "All Inboxes", count: mailboxes.length, icon: InboxIcon },
+    { label: "Unread", count: totalUnread, icon: MailIcon },
+    { label: "Mentions", count: mentionEmailCount, icon: AtSignIcon },
+    {
+      label: "Attachments",
+      count: attachmentEmailCount,
+      icon: PaperclipIcon,
+    },
+    { label: "Archived", count: dashboardMetrics.totalSent, icon: ArchiveIcon },
+  ];
+
   return (
-    <div className="flex-1 space-y-4 ">
+    <div className="flex-1 space-y-5">
       {errorMessage ? (
         <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
@@ -148,492 +284,885 @@ export function DashboardClient({ tab }: DashboardClientProps) {
 
       {tab === "inboxes" ? (
         <section
-          className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[var(--inbox-col)_var(--messages-col)_minmax(0,1fr)]"
+          className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[var(--inbox-col)_var(--messages-col)_minmax(0,1fr)]"
           style={inboxPaneGridStyle}
         >
-          <aside className="overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <SidebarHeader className="border-b border-sidebar-border p-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={() => setInboxesCollapsed((previous) => !previous)}
-                  aria-label={
-                    inboxesCollapsed
-                      ? "Expand inbox sidebar"
-                      : "Collapse inbox sidebar"
-                  }
-                >
-                  {inboxesCollapsed ? (
-                    <ChevronRightIcon />
-                  ) : (
-                    <ChevronLeftIcon />
+          <aside className="overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#11141d]/96 text-white shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]">
+            <div className="flex h-full min-h-[calc(100vh-15rem)] flex-col">
+              <div className="border-b border-white/8 p-3">
+                <div
+                  className={cn(
+                    "flex items-center gap-2",
+                    inboxesCollapsed ? "justify-center" : "justify-between",
                   )}
-                </Button>
-
-                {inboxesCollapsed ? (
-                  <InboxIcon className="size-4 text-sidebar-foreground/70" />
-                ) : (
-                  <>
-                    <div className="grid min-w-0 flex-1 leading-tight">
-                      <h2 className="truncate font-heading text-sm font-semibold">
-                        Inboxes
-                      </h2>
-                      <p className="truncate text-[11px] text-sidebar-foreground/65">
-                        {mailboxes.length} mailbox account(s)
-                      </p>
-                    </div>
-                    <Badge variant="secondary">
-                      {filteredMailboxes.length}
-                    </Badge>
-                  </>
-                )}
-              </div>
-
-              {!inboxesCollapsed ? (
-                <div className="relative mt-2">
-                  <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
-                  <SidebarInput
-                    value={inboxSidebarSearch}
-                    onChange={(event) =>
-                      setInboxSidebarSearch(event.target.value)
-                    }
-                    className="h-8 border-sidebar-border bg-sidebar-accent/50 pl-9"
-                    placeholder="Search inboxes"
-                  />
-                </div>
-              ) : null}
-            </SidebarHeader>
-
-            <SidebarContent className="max-h-[calc(100vh-14rem)] p-2">
-              {loadingMailboxes ? (
-                <p className="px-2 py-2 text-sm text-sidebar-foreground/70">
-                  Loading inboxes...
-                </p>
-              ) : mailboxes.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/30 px-3 py-3 text-sm text-sidebar-foreground/70">
-                  <p>No inboxes created yet.</p>
+                >
                   <Button
-                    size="sm"
-                    className="mt-2"
+                    className={cn(
+                      "h-11 rounded-2xl border-0 bg-[linear-gradient(135deg,#8b5cf6,#6366f1)] text-white hover:opacity-95",
+                      inboxesCollapsed ? "size-11 px-0" : "flex-1 justify-center",
+                    )}
                     onClick={() => {
                       router.push("/dashboard/users");
                       openCreateUserSheet();
                     }}
+                    title="Create new inbox"
                   >
-                    Create New Inbox
+                    <PlusIcon />
+                    {!inboxesCollapsed ? "New Inbox" : null}
+                  </Button>
+
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="rounded-full border border-white/8 bg-white/[0.03] text-white/65 hover:bg-white/[0.08] hover:text-white"
+                    onClick={() => setInboxesCollapsed((previous) => !previous)}
+                    aria-label={
+                      inboxesCollapsed
+                        ? "Expand inbox sidebar"
+                        : "Collapse inbox sidebar"
+                    }
+                  >
+                    {inboxesCollapsed ? (
+                      <ChevronRightIcon />
+                    ) : (
+                      <ChevronLeftIcon />
+                    )}
                   </Button>
                 </div>
-              ) : filteredMailboxes.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/30 px-3 py-3 text-sm text-sidebar-foreground/70">
-                  No inboxes match your search.
-                </p>
-              ) : (
-                <SidebarGroup className="p-0">
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {filteredMailboxes.map((mailbox) => {
-                        const active = mailbox.id === selectedMailboxId;
+              </div>
 
-                        return (
-                          <SidebarMenuItem key={mailbox.id}>
-                            <SidebarMenuButton
-                              isActive={active}
-                              tooltip={
-                                inboxesCollapsed
-                                  ? mailbox.label || mailbox.emailAddress
-                                  : undefined
-                              }
-                              className={
-                                inboxesCollapsed
-                                  ? "justify-center px-0"
-                                  : "h-auto items-start py-2"
-                              }
-                              onClick={() => {
-                                setSelectedMailboxId(mailbox.id);
-                                setFolder("inbox");
-                              }}
-                            >
-                              {inboxesCollapsed ? (
-                                <InboxIcon className="size-4" />
-                              ) : (
-                                <div className="w-full space-y-0.5">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <p className="truncate text-sm font-semibold">
-                                        {mailbox.label || "Untitled Inbox"}
-                                      </p>
-                                      <p className="truncate text-xs text-sidebar-foreground/70">
-                                        {mailbox.emailAddress}
-                                      </p>
-                                    </div>
-                                    <Badge variant="outline">
-                                      {mailbox.inboxCount}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-[11px] text-sidebar-foreground/65">
-                                    UID: {mailbox.passportId} ·{" "}
-                                    {mailbox.id.slice(0, 8)}
+              <div className="flex-1 space-y-6 overflow-y-auto p-4">
+                {!inboxesCollapsed ? (
+                  <>
+                    <section className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            My Inboxes
+                          </p>
+                          <p className="text-xs text-white/38">
+                            {mailboxes.length} connected mailbox
+                            {mailboxes.length === 1 ? "" : "es"}
+                          </p>
+                        </div>
+                        <Badge className="border-white/8 bg-white/[0.05] text-white/72 hover:bg-white/[0.05]">
+                          {filteredMailboxes.length}
+                        </Badge>
+                      </div>
+
+                      <div className="relative">
+                        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                        <Input
+                          value={inboxSidebarSearch}
+                          onChange={(event) =>
+                            setInboxSidebarSearch(event.target.value)
+                          }
+                          className="h-10 rounded-2xl border-white/8 bg-white/[0.04] pl-9 text-white placeholder:text-white/32 focus-visible:border-white/15 focus-visible:ring-white/10"
+                          placeholder="Search inboxes"
+                        />
+                      </div>
+
+                      {loadingMailboxes ? (
+                        <p className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                          Loading inboxes...
+                        </p>
+                      ) : mailboxes.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                          <p>No inboxes created yet.</p>
+                          <Button
+                            size="sm"
+                            className="mt-3 rounded-full bg-white text-[#0f1320] hover:bg-white/90"
+                            onClick={() => {
+                              router.push("/dashboard/users");
+                              openCreateUserSheet();
+                            }}
+                          >
+                            Create New Inbox
+                          </Button>
+                        </div>
+                      ) : filteredMailboxes.length === 0 ? (
+                        <p className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                          No inboxes match your search.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {filteredMailboxes.map((mailbox) => {
+                            const active = mailbox.id === selectedMailboxId;
+                            const mailboxTone = getTone(mailbox.id);
+
+                            return (
+                              <button
+                                key={mailbox.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMailboxId(mailbox.id);
+                                  setFolder("inbox");
+                                }}
+                                className={cn(
+                                  "flex w-full items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-left transition",
+                                  active
+                                    ? "border-violet-400/60 bg-[linear-gradient(180deg,rgba(139,92,246,0.16),rgba(59,63,110,0.16))] shadow-[0_20px_40px_-30px_rgba(139,92,246,0.9)]"
+                                    : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]",
+                                )}
+                              >
+                                <Avatar className="size-10 rounded-2xl after:hidden">
+                                  <AvatarFallback
+                                    className={cn(
+                                      "rounded-2xl text-sm font-semibold",
+                                      mailboxTone,
+                                    )}
+                                  >
+                                    {getInitials(getMailboxName(mailbox))}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-white">
+                                    {mailbox.emailAddress}
+                                  </p>
+                                  <p className="truncate text-xs text-white/40">
+                                    {getMailboxName(mailbox)}
                                   </p>
                                 </div>
-                              )}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        );
-                      })}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
-            </SidebarContent>
+                                <span className="rounded-full bg-white/[0.08] px-2 py-1 text-xs font-medium text-white/78">
+                                  {mailbox.inboxCount}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          router.push("/dashboard/users");
+                          openCreateUserSheet();
+                        }}
+                        className="inline-flex items-center gap-2 text-sm text-violet-300 transition hover:text-violet-200"
+                      >
+                        <PlusIcon className="size-4" />
+                        Add inbox
+                      </button>
+                    </section>
+
+                    <section className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white">
+                          Smart Views
+                        </p>
+                        <span className="text-xs text-white/32">Live</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {smartViews.map((item) => {
+                          const Icon = item.icon;
+
+                          return (
+                            <div
+                              key={item.label}
+                              className="flex items-center gap-3 rounded-[1.15rem] border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                            >
+                              <span className="inline-flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-white/65">
+                                <Icon className="size-4" />
+                              </span>
+                              <span className="flex-1 text-sm text-white/72">
+                                {item.label}
+                              </span>
+                              <span className="rounded-full bg-white/[0.05] px-2 py-1 text-xs text-white/60">
+                                {item.count}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <section className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white">
+                          Labels
+                        </p>
+                        <PlusIcon className="size-4 text-white/32" />
+                      </div>
+
+                      <div className="space-y-2">
+                        {MAIL_LABELS.map((item) => (
+                          <div
+                            key={item.label}
+                            className="flex items-center gap-3 rounded-[1.15rem] border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                          >
+                            <span className={cn("size-3 rounded-full", item.color)} />
+                            <span className="text-sm text-white/72">
+                              {item.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    {filteredMailboxes.slice(0, 6).map((mailbox) => {
+                      const active = mailbox.id === selectedMailboxId;
+                      const mailboxTone = getTone(mailbox.id);
+
+                      return (
+                        <button
+                          key={mailbox.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMailboxId(mailbox.id);
+                            setFolder("inbox");
+                          }}
+                          title={getMailboxName(mailbox)}
+                          className={cn(
+                            "relative flex size-11 items-center justify-center rounded-2xl border transition",
+                            active
+                              ? "border-violet-400/60 bg-violet-500/15"
+                              : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "inline-flex size-8 items-center justify-center rounded-xl text-xs font-semibold",
+                              mailboxTone,
+                            )}
+                          >
+                            {getInitials(getMailboxName(mailbox))}
+                          </span>
+                          {mailbox.inboxCount > 0 ? (
+                            <span className="absolute -right-1 -top-1 rounded-full bg-violet-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                              {mailbox.inboxCount}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-white/8 p-4">
+                <div className="rounded-[1.25rem] border border-white/8 bg-white/[0.03] p-3">
+                  <div
+                    className={cn(
+                      "flex items-center gap-2",
+                      inboxesCollapsed ? "justify-center" : "justify-between",
+                    )}
+                  >
+                    {!inboxesCollapsed ? (
+                      <>
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            Queue volume
+                          </p>
+                          <p className="text-xs text-white/38">
+                            {totalMessageCount} synced message
+                            {totalMessageCount === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <span className="text-xs text-white/45">
+                          {Math.round(queueVolumePercent)}%
+                        </span>
+                      </>
+                    ) : (
+                      <InboxIcon className="size-4 text-white/55" />
+                    )}
+                  </div>
+
+                  {!inboxesCollapsed ? (
+                    <div className="mt-3 h-2 rounded-full bg-white/[0.06]">
+                      <div
+                        className="h-2 rounded-full bg-[linear-gradient(90deg,#8b5cf6,#6366f1)]"
+                        style={{ width: `${queueVolumePercent}%` }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </aside>
 
-          <section className="overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <SidebarHeader className="border-b border-sidebar-border p-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={() => setMessagesCollapsed((previous) => !previous)}
-                  aria-label={
-                    messagesCollapsed
-                      ? "Expand messages sidebar"
-                      : "Collapse messages sidebar"
-                  }
-                >
-                  {messagesCollapsed ? (
-                    <ChevronRightIcon />
-                  ) : (
-                    <ChevronLeftIcon />
-                  )}
-                </Button>
+          <section className="overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#11141d]/96 text-white shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]">
+            <div className="flex h-full min-h-[calc(100vh-15rem)] flex-col">
+              <div className="border-b border-white/8 p-4">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    {messagesCollapsed ? (
+                      <div className="flex justify-center">
+                        <MailIcon className="size-4 text-white/65" />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-lg font-semibold text-white">
+                              {selectedMailboxTitle}
+                            </p>
+                            <p className="truncate text-xs text-white/38">
+                              {selectedMailbox?.emailAddress ||
+                                "Select an inbox to view messages"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-violet-300">
+                              {folder === "inbox"
+                                ? `${selectedMailbox?.inboxCount || unreadEmailCount} unread`
+                                : `${selectedMailbox?.sentCount || filteredEmails.length} sent`}
+                            </span>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              className="rounded-full text-white/55 hover:bg-white/[0.06] hover:text-white"
+                            >
+                              <MoreHorizontalIcon />
+                            </Button>
+                          </div>
+                        </div>
 
-                {messagesCollapsed ? (
-                  <MailIcon className="size-4 text-sidebar-foreground/70" />
+                        <div className="mt-4 flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                            <Input
+                              value={messagesSidebarSearch}
+                              onChange={(event) =>
+                                setMessagesSidebarSearch(event.target.value)
+                              }
+                              className="h-10 rounded-2xl border-white/8 bg-white/[0.04] pl-9 text-white placeholder:text-white/32 focus-visible:border-white/15 focus-visible:ring-white/10"
+                              placeholder="Search emails"
+                            />
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="rounded-2xl border border-white/8 bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white"
+                            onClick={() =>
+                              selectedMailboxId
+                                ? void loadEmails(selectedMailboxId, folder)
+                                : undefined
+                            }
+                            disabled={!selectedMailboxId || loadingEmails}
+                          >
+                            <RefreshCwIcon
+                              className={cn(
+                                loadingEmails ? "animate-spin" : "",
+                              )}
+                            />
+                          </Button>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setFolder("inbox")}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 transition",
+                              folder === "inbox"
+                                ? "border-violet-400/60 bg-violet-500/20 text-white"
+                                : "border-white/8 bg-transparent text-white/58 hover:bg-white/[0.06] hover:text-white",
+                            )}
+                          >
+                            Inbox
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFolder("sent")}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 transition",
+                              folder === "sent"
+                                ? "border-violet-400/60 bg-violet-500/20 text-white"
+                                : "border-white/8 bg-transparent text-white/58 hover:bg-white/[0.06] hover:text-white",
+                            )}
+                          >
+                            Sent
+                          </button>
+                          <span className="rounded-full bg-white/[0.04] px-3 py-1.5 text-white/58">
+                            Unread {unreadEmailCount}
+                          </span>
+                          <span className="rounded-full bg-white/[0.04] px-3 py-1.5 text-white/58">
+                            Attachments {attachmentEmailCount}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="rounded-full border border-white/8 bg-white/[0.03] text-white/65 hover:bg-white/[0.08] hover:text-white"
+                    onClick={() => setMessagesCollapsed((previous) => !previous)}
+                    aria-label={
+                      messagesCollapsed
+                        ? "Expand messages sidebar"
+                        : "Collapse messages sidebar"
+                    }
+                  >
+                    {messagesCollapsed ? (
+                      <ChevronRightIcon />
+                    ) : (
+                      <ChevronLeftIcon />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2">
+                {!selectedMailbox ? (
+                  <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                    Choose an inbox from the left column to load messages.
+                  </p>
+                ) : loadingEmails ? (
+                  <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                    Loading messages...
+                  </p>
+                ) : filteredEmails.length === 0 ? (
+                  <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                    No messages for this view.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredEmails.map((email) => {
+                      const active = email.id === selectedEmailId;
+                      const sender = splitAddress(email.from);
+                      const tone = getTone(email.id);
+
+                      return (
+                        <button
+                          key={email.id}
+                          type="button"
+                          onClick={() => setSelectedEmailId(email.id)}
+                          title={messagesCollapsed ? email.subject : undefined}
+                          className={cn(
+                            "w-full rounded-[1.25rem] border transition",
+                            active
+                              ? "border-violet-400/60 bg-[linear-gradient(180deg,rgba(139,92,246,0.16),rgba(59,63,110,0.12))] shadow-[0_20px_40px_-30px_rgba(139,92,246,0.9)]"
+                              : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]",
+                            messagesCollapsed ? "px-0 py-3" : "px-3 py-3",
+                          )}
+                        >
+                          {messagesCollapsed ? (
+                            <div className="flex justify-center">
+                              <span
+                                className={cn(
+                                  "inline-flex size-9 items-center justify-center rounded-2xl text-xs font-semibold",
+                                  tone,
+                                )}
+                              >
+                                {getInitials(sender.name)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-3 text-left">
+                              <Avatar className="size-10 rounded-full after:hidden">
+                                <AvatarFallback
+                                  className={cn("text-sm font-semibold", tone)}
+                                >
+                                  {getInitials(sender.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-white">
+                                      {sender.name}
+                                    </p>
+                                    <p className="truncate text-sm font-semibold text-white">
+                                      {email.subject}
+                                    </p>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-2 text-xs text-white/40">
+                                    <span>{formatMessageTimestamp(email.createdAt)}</span>
+                                    {!email.isRead ? (
+                                      <span className="size-2 rounded-full bg-violet-400" />
+                                    ) : null}
+                                  </div>
+                                </div>
+                                <p className="mt-1 truncate text-sm text-white/42">
+                                  {buildSnippet(
+                                    getChatMessageBody(email),
+                                    88,
+                                  )}
+                                </p>
+                                <div className="mt-2 flex items-center gap-2 text-xs text-white/35">
+                                  {email.attachments.length > 0 ? (
+                                    <span className="inline-flex items-center gap-1">
+                                      <PaperclipIcon className="size-3.5" />
+                                      {email.attachments.length}
+                                    </span>
+                                  ) : null}
+                                  {email.kind === "sent" ? (
+                                    <span>Sent</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#11141d]/96 text-white shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]">
+            <div className="flex h-full min-h-[calc(100vh-15rem)] flex-col">
+              <div className="border-b border-white/8 px-5 py-4">
+                {selectedEmail ? (
+                  <>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate text-[1.75rem] font-semibold tracking-tight text-white">
+                            {selectedEmail.subject}
+                          </h3>
+                          <Badge className="border-violet-400/30 bg-violet-500/10 text-violet-200 hover:bg-violet-500/10">
+                            {folder === "inbox" ? "Inbox" : "Sent"}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-sm text-white/40">
+                          Thread participants:{" "}
+                          {Array.from(getEmailParticipants(selectedEmail)).join(
+                            ", ",
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          className="rounded-full border border-white/8 bg-white/[0.03] text-white/55 hover:bg-white/[0.08] hover:text-white"
+                        >
+                          <StarIcon />
+                        </Button>
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          className="rounded-full border border-white/8 bg-white/[0.03] text-white/55 hover:bg-white/[0.08] hover:text-white"
+                        >
+                          <ArchiveIcon />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                className="rounded-full border border-white/8 bg-white/[0.03] text-white/55 hover:bg-white/[0.08] hover:text-white"
+                              />
+                            }
+                          >
+                            <MoreHorizontalIcon />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setStatusMessage("Star action coming soon.")
+                              }
+                            >
+                              Mark as important
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setStatusMessage("Archive action coming soon.")
+                              }
+                            >
+                              Archive thread
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar className="size-11 rounded-full after:hidden">
+                          <AvatarFallback
+                            className={cn(
+                              "text-sm font-semibold",
+                              getTone(selectedEmail.from),
+                            )}
+                          >
+                            {selectedSender
+                              ? getInitials(selectedSender.name)
+                              : "IR"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-white">
+                            {selectedSender?.name || selectedEmail.from}
+                          </p>
+                          <p className="truncate text-xs text-white/42">
+                            {selectedSender?.email || selectedEmail.from}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-white/42">
+                        <p>{formatTimeOnly(selectedEmail.createdAt)}</p>
+                        {selectedRecipients.length > 0 ? (
+                          <p className="mt-1 max-w-[24rem] truncate text-xs">
+                            to {selectedRecipients.join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <>
-                    <div className="grid min-w-0 leading-tight">
-                      <h3 className="truncate text-sm font-semibold">
-                        {selectedMailbox
-                          ? `${selectedMailbox.label || selectedMailbox.emailAddress}`
-                          : "Messages"}
-                      </h3>
-                      <p className="truncate text-[11px] text-sidebar-foreground/70">
-                        {selectedMailbox
-                          ? "Conversation list"
-                          : "Select an inbox"}
-                      </p>
-                    </div>
-
-                    <div className="ml-auto flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant={folder === "inbox" ? "default" : "outline"}
-                        onClick={() => setFolder("inbox")}
-                      >
-                        Inbox
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={folder === "sent" ? "default" : "outline"}
-                        onClick={() => setFolder("sent")}
-                      >
-                        Sent
-                      </Button>
-                      <Button
-                        size="icon-sm"
-                        variant="outline"
-                        onClick={() =>
-                          selectedMailboxId
-                            ? void loadEmails(selectedMailboxId, folder)
-                            : undefined
-                        }
-                        disabled={!selectedMailboxId || loadingEmails}
-                      >
-                        <RefreshCwIcon />
-                      </Button>
-                    </div>
+                    <h3 className="text-lg font-semibold text-white">
+                      Select a message
+                    </h3>
+                    <p className="mt-1 text-sm text-white/42">
+                      Choose an email from the middle column to open the thread.
+                    </p>
                   </>
                 )}
               </div>
 
-              {!messagesCollapsed ? (
-                <div className="relative mt-2">
-                  <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/60" />
-                  <SidebarInput
-                    value={messagesSidebarSearch}
-                    onChange={(event) =>
-                      setMessagesSidebarSearch(event.target.value)
-                    }
-                    className="h-8 border-sidebar-border bg-sidebar-accent/50 pl-9"
-                    placeholder="Search messages"
-                  />
-                </div>
-              ) : null}
-            </SidebarHeader>
-
-            <SidebarContent className="max-h-[calc(100vh-14rem)] p-2">
-              {!selectedMailbox ? (
-                <p className="rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/30 px-3 py-3 text-sm text-sidebar-foreground/70">
-                  Choose an inbox from the sidebar to load messages.
-                </p>
-              ) : loadingEmails ? (
-                <p className="px-2 py-2 text-sm text-sidebar-foreground/70">
-                  Loading messages...
-                </p>
-              ) : filteredEmails.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-sidebar-border bg-sidebar-accent/30 px-3 py-3 text-sm text-sidebar-foreground/70">
-                  No messages for this view.
-                </p>
-              ) : (
-                <SidebarGroup className="p-0">
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {filteredEmails.map((email) => {
-                        const active = email.id === selectedEmailId;
-
-                        return (
-                          <SidebarMenuItem key={email.id}>
-                            <SidebarMenuButton
-                              isActive={active}
-                              tooltip={
-                                messagesCollapsed ? email.subject : undefined
-                              }
-                              className={
-                                messagesCollapsed
-                                  ? "justify-center px-0"
-                                  : "h-auto items-start py-2"
-                              }
-                              onClick={() => setSelectedEmailId(email.id)}
-                            >
-                              {messagesCollapsed ? (
-                                <MailIcon className="size-4" />
-                              ) : (
-                                <div className="w-full space-y-0.5">
-                                  <p className="truncate text-sm font-semibold">
-                                    {email.subject}
-                                  </p>
-                                  <p className="truncate text-xs text-sidebar-foreground/70">
-                                    {email.from}
-                                  </p>
-                                  <p className="text-xs text-sidebar-foreground/65">
-                                    {buildSnippet(email.preview, 88)}
-                                  </p>
-                                  <p className="text-[11px] text-sidebar-foreground/60">
-                                    {formatTimestamp(email.createdAt)}
-                                  </p>
-                                </div>
-                              )}
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        );
-                      })}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
-            </SidebarContent>
-          </section>
-
-          <section className="vibe-shell overflow-hidden rounded-2xl">
-            <div className="border-b px-4 py-3">
-              <h3 className="text-base font-semibold text-zinc-900">
-                Thread Chat
-              </h3>
-              <p className="text-xs text-zinc-600">
-                Conversation history for the selected email shown as chat.
-              </p>
-            </div>
-
-            <div className="max-h-[calc(100vh-14rem)] space-y-3 overflow-y-auto p-4">
-              {selectedEmail ? (
-                <>
-                  <div className="rounded-xl border border-zinc-200 bg-white/85 p-3">
-                    <p className="text-sm font-semibold text-zinc-900">
-                      {selectedEmail.subject}
-                    </p>
-                    <p className="text-xs text-zinc-600">
-                      Thread participants:{" "}
-                      {Array.from(getEmailParticipants(selectedEmail)).join(
-                        ", ",
-                      )}
-                    </p>
-                  </div>
-
-                  {loadingThread ? (
-                    <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-                      Loading thread messages...
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {threadEmails.map((threadEmail) => {
-                        const isSentMessage = threadEmail.kind === "sent";
-                        const messageBody = getChatMessageBody(threadEmail);
-                        const canReplyToThis = threadEmail.kind === "inbound";
-
-                        return (
-                          <div
-                            key={threadEmail.id}
-                            className={`flex ${isSentMessage ? "justify-end" : "justify-start"}`}
-                          >
-                            <article
-                              className={`max-w-[84%] rounded-2xl border px-3 py-2 ${
-                                isSentMessage
-                                  ? "border-sky-200 bg-sky-50"
-                                  : "border-zinc-200 bg-white"
-                              }`}
-                            >
-                              <div className="mb-1 flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="truncate text-xs font-semibold text-zinc-900">
-                                    {isSentMessage ? "You" : threadEmail.from}
-                                  </p>
-                                  <p className="text-[11px] text-zinc-500">
-                                    {formatTimestamp(threadEmail.createdAt)}
-                                  </p>
-                                </div>
-
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger
-                                    render={
-                                      <Button
-                                        size="icon-sm"
-                                        variant="ghost"
-                                        className="size-7"
-                                      />
-                                    }
-                                  >
-                                    <MoreHorizontalIcon />
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent
-                                    align="end"
-                                    className="w-44"
-                                  >
-                                    <DropdownMenuItem
-                                      disabled={!canReplyToThis}
-                                      onClick={() => {
-                                        if (!canReplyToThis) {
-                                          return;
-                                        }
-                                        setReplyTargetInboundId(threadEmail.id);
-                                        setReplyAll(false);
-                                        setStatusMessage(
-                                          "Reply mode: specific recipient",
-                                        );
-                                      }}
-                                    >
-                                      Reply specific
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      disabled={!canReplyToThis}
-                                      onClick={() => {
-                                        if (!canReplyToThis) {
-                                          return;
-                                        }
-                                        setReplyTargetInboundId(threadEmail.id);
-                                        setReplyAll(true);
-                                        setStatusMessage(
-                                          "Reply mode: reply all recipients",
-                                        );
-                                      }}
-                                    >
-                                      Reply all
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-
-                              <p className="text-xs text-zinc-600">
-                                To: {threadEmail.to.join(", ") || "(none)"}
-                              </p>
-
-                              <pre className="mt-2 whitespace-pre-wrap text-sm text-zinc-800">
-                                {messageBody}
-                              </pre>
-
-                              {threadEmail.attachments.length > 0 ? (
-                                <div className="mt-2 space-y-1">
-                                  {threadEmail.attachments.map((attachment) => (
-                                    <div
-                                      key={attachment.id}
-                                      className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-2 py-1 text-xs"
-                                    >
-                                      <span>
-                                        {attachment.filename || "attachment"} (
-                                        {formatBytes(attachment.sizeBytes)})
-                                      </span>
-                                      {attachment.hasDownload ? (
-                                        <a
-                                          className="font-semibold text-sky-700 underline"
-                                          href={attachment.downloadPath}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                        >
-                                          Download
-                                        </a>
-                                      ) : (
-                                        <span className="text-zinc-500">
-                                          No file
-                                        </span>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : null}
-                            </article>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {replyTargetEmail ? (
-                    <div className="rounded-xl border border-zinc-200 bg-white/85 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                        Quick Reply
+              <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                {selectedEmail ? (
+                  <>
+                    {loadingThread ? (
+                      <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                        Loading thread messages...
                       </p>
-                      <p className="mb-2 text-xs text-zinc-600">
-                        Target: {replyTargetEmail.from} ·{" "}
-                        {formatTimestamp(replyTargetEmail.createdAt)}
+                    ) : (
+                      <div className="space-y-4">
+                        {threadEmails.map((threadEmail) => {
+                          const isSentMessage = threadEmail.kind === "sent";
+                          const canReplyToThis = threadEmail.kind === "inbound";
+                          const sender = splitAddress(
+                            isSentMessage ? user.email || "You" : threadEmail.from,
+                          );
+
+                          return (
+                            <div
+                              key={threadEmail.id}
+                              className={cn(
+                                "flex",
+                                isSentMessage ? "justify-end" : "justify-start",
+                              )}
+                            >
+                              <article
+                                className={cn(
+                                  "max-w-[85%] rounded-[1.5rem] border px-4 py-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.95)]",
+                                  isSentMessage
+                                    ? "border-violet-400/25 bg-[linear-gradient(135deg,rgba(109,40,217,0.72),rgba(99,102,241,0.7))] text-white"
+                                    : "border-white/8 bg-white/[0.05] text-white",
+                                )}
+                              >
+                                <div className="mb-2 flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={cn(
+                                          "inline-flex size-8 items-center justify-center rounded-full text-xs font-semibold",
+                                          isSentMessage
+                                            ? "bg-white/14 text-white"
+                                            : getTone(threadEmail.from),
+                                        )}
+                                      >
+                                        {getInitials(sender.name)}
+                                      </span>
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-medium">
+                                          {isSentMessage
+                                            ? user.name || "You"
+                                            : sender.name}
+                                        </p>
+                                        <p
+                                          className={cn(
+                                            "text-xs",
+                                            isSentMessage
+                                              ? "text-white/70"
+                                              : "text-white/38",
+                                          )}
+                                        >
+                                          {formatTimeOnly(threadEmail.createdAt)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                      render={
+                                        <Button
+                                          size="icon-sm"
+                                          variant="ghost"
+                                          className={cn(
+                                            "size-7 rounded-full",
+                                            isSentMessage
+                                              ? "text-white/72 hover:bg-white/10 hover:text-white"
+                                              : "text-white/45 hover:bg-white/[0.08] hover:text-white",
+                                          )}
+                                        />
+                                      }
+                                    >
+                                      <MoreHorizontalIcon />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-44"
+                                    >
+                                      <DropdownMenuItem
+                                        disabled={!canReplyToThis}
+                                        onClick={() => {
+                                          if (!canReplyToThis) {
+                                            return;
+                                          }
+                                          setReplyTargetInboundId(threadEmail.id);
+                                          setReplyAll(false);
+                                          setStatusMessage(
+                                            "Reply mode: specific recipient",
+                                          );
+                                        }}
+                                      >
+                                        Reply specific
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        disabled={!canReplyToThis}
+                                        onClick={() => {
+                                          if (!canReplyToThis) {
+                                            return;
+                                          }
+                                          setReplyTargetInboundId(threadEmail.id);
+                                          setReplyAll(true);
+                                          setStatusMessage(
+                                            "Reply mode: reply all recipients",
+                                          );
+                                        }}
+                                      >
+                                        Reply all
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+
+                                <pre
+                                  className={cn(
+                                    "whitespace-pre-wrap text-sm leading-7",
+                                    isSentMessage ? "text-white" : "text-white/82",
+                                  )}
+                                >
+                                  {getChatMessageBody(threadEmail)}
+                                </pre>
+
+                                {threadEmail.attachments.length > 0 ? (
+                                  <div className="mt-3 space-y-2">
+                                    {threadEmail.attachments.map((attachment) => (
+                                      <div
+                                        key={attachment.id}
+                                        className={cn(
+                                          "flex items-center justify-between rounded-[1rem] border px-3 py-2 text-sm",
+                                          isSentMessage
+                                            ? "border-white/12 bg-black/10"
+                                            : "border-white/8 bg-white/[0.04]",
+                                        )}
+                                      >
+                                        <div className="min-w-0">
+                                          <p className="truncate font-medium">
+                                            {attachment.filename || "attachment"}
+                                          </p>
+                                          <p
+                                            className={cn(
+                                              "text-xs",
+                                              isSentMessage
+                                                ? "text-white/72"
+                                                : "text-white/40",
+                                            )}
+                                          >
+                                            {formatBytes(attachment.sizeBytes)}
+                                          </p>
+                                        </div>
+                                        {attachment.hasDownload ? (
+                                          <a
+                                            className={cn(
+                                              "text-xs font-semibold underline underline-offset-4",
+                                              isSentMessage
+                                                ? "text-white"
+                                                : "text-violet-200",
+                                            )}
+                                            href={attachment.downloadPath}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                          >
+                                            Download
+                                          </a>
+                                        ) : (
+                                          <span className="text-xs text-white/40">
+                                            No file
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </article>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                    Click an email to open its conversation here.
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-white/8 p-4">
+                {replyTargetEmail ? (
+                  <div className="rounded-[1.25rem] border border-white/8 bg-[#0d1119]">
+                    <div className="flex items-center gap-6 border-b border-white/8 px-4 py-3 text-sm">
+                      <span className="font-medium text-violet-300">Reply</span>
+                      <span className="text-white/35">Internal Note</span>
+                    </div>
+                    <div className="space-y-3 px-4 py-4">
+                      <p className="text-xs text-white/42">
+                        Replying to {replyTargetEmail.from} ·{" "}
+                        {formatMessageTimestamp(replyTargetEmail.createdAt)}
                       </p>
                       <textarea
-                        className="min-h-24 w-full rounded-xl border border-input/90 bg-white px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35"
-                        placeholder="Write your reply"
+                        className="min-h-28 w-full resize-none rounded-[1rem] border border-white/8 bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/28 focus-visible:border-violet-400/40"
+                        placeholder="Type your reply..."
                         value={replyBody}
                         onChange={(event) => setReplyBody(event.target.value)}
                       />
-                      <label className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
-                        <input
-                          type="checkbox"
-                          checked={replyAll}
-                          onChange={(event) =>
-                            setReplyAll(event.target.checked)
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <label className="flex items-center gap-2 text-xs text-white/48">
+                          <input
+                            type="checkbox"
+                            checked={replyAll}
+                            onChange={(event) =>
+                              setReplyAll(event.target.checked)
+                            }
+                          />
+                          Reply all recipients
+                        </label>
+                        <Button
+                          className="rounded-full bg-[linear-gradient(135deg,#8b5cf6,#6366f1)] text-white hover:opacity-95"
+                          onClick={() => void handleReply()}
+                          disabled={
+                            busyAction === "reply" || !replyBody.trim()
                           }
-                        />
-                        Reply all recipients
-                      </label>
-                      <Button
-                        className="mt-2"
-                        size="sm"
-                        onClick={() => void handleReply()}
-                        disabled={busyAction === "reply" || !replyBody.trim()}
-                      >
-                        {busyAction === "reply"
-                          ? "Sending Reply..."
-                          : "Send Reply"}
-                      </Button>
+                        >
+                          <SendHorizontalIcon />
+                          {busyAction === "reply" ? "Sending..." : "Send"}
+                        </Button>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-                      Select an inbound message from the thread menu to reply.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="rounded-xl border border-dashed border-zinc-300 bg-white/70 px-3 py-4 text-sm text-zinc-600">
-                  Click an email to open it here.
-                </p>
-              )}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                    Select an inbound thread message to enable quick reply.
+                  </div>
+                )}
+              </div>
             </div>
           </section>
         </section>
