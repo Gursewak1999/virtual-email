@@ -1,7 +1,7 @@
-import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { InboxesDashboardClient } from "@/components/dashboard/inboxes-dashboard-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
-  return <DashboardClient tab="inboxes" />;
+export default function Page() {
+  return <InboxesDashboardClient />;
 }

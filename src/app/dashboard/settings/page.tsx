@@ -1,7 +1,7 @@
-import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { SettingsDashboardClient } from "@/components/dashboard/settings-dashboard-client";
 
 export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
-  return <DashboardClient tab="settings" />;
+  return <SettingsDashboardClient />;
 }
