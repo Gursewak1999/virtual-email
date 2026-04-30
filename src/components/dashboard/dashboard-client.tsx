@@ -240,7 +240,9 @@ export function DashboardClient({ tab }: DashboardClientProps) {
   } = useDashboardState();
   const router = useRouter();
 
-  const unreadEmailCount = filteredEmails.filter((email) => !email.isRead).length;
+  const unreadEmailCount = filteredEmails.filter(
+    (email) => !email.isRead,
+  ).length;
   const attachmentEmailCount = filteredEmails.filter(
     (email) => email.attachments.length > 0,
   ).length;
@@ -258,7 +260,21 @@ export function DashboardClient({ tab }: DashboardClientProps) {
   const selectedMailboxTitle = selectedMailbox
     ? getMailboxName(selectedMailbox)
     : "Choose a mailbox";
-  const selectedSender = selectedEmail ? splitAddress(selectedEmail.from) : null;
+  const mailPanelClass =
+    "overflow-hidden rounded-[1.4rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel)] text-[color:var(--dashboard-text)] shadow-[0_26px_70px_-42px_rgba(15,23,42,0.65)]";
+  const mailInsetClass =
+    "border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)]";
+  const mailGhostButtonClass =
+    "rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] text-[color:var(--dashboard-text-soft)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]";
+  const mailInputClass =
+    "h-9 rounded-xl border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] text-[color:var(--dashboard-text)] placeholder:text-[color:var(--dashboard-text-soft)] focus-visible:border-[color:var(--dashboard-border)] focus-visible:ring-2 focus-visible:ring-[color:var(--dashboard-hover)]";
+  const mailPlaceholderClass =
+    "rounded-[1rem] border border-dashed border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-3 py-4 text-sm text-[color:var(--dashboard-text-soft)]";
+  const mailSoftTextClass = "text-[color:var(--dashboard-text-soft)]";
+  const mailMutedTextClass = "text-[color:var(--dashboard-text-muted)]";
+  const selectedSender = selectedEmail
+    ? splitAddress(selectedEmail.from)
+    : null;
   const selectedRecipients = selectedEmail
     ? [...selectedEmail.to, ...selectedEmail.cc].filter(Boolean)
     : [];
@@ -275,21 +291,21 @@ export function DashboardClient({ tab }: DashboardClientProps) {
   ];
 
   return (
-    <div className="flex-1 space-y-5">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       {errorMessage ? (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-[1rem] border border-red-500/25 bg-red-500/8 px-3.5 py-2.5 text-sm text-red-200">
           {errorMessage}
         </div>
       ) : null}
 
       {tab === "inboxes" ? (
         <section
-          className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[var(--inbox-col)_var(--messages-col)_minmax(0,1fr)]"
+          className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-[var(--inbox-col)_var(--messages-col)_minmax(0,1fr)]"
           style={inboxPaneGridStyle}
         >
-          <aside className="overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#11141d]/96 text-white shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]">
-            <div className="flex h-full min-h-[calc(100vh-15rem)] flex-col">
-              <div className="border-b border-white/8 p-3">
+          <aside className={mailPanelClass}>
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="border-b border-[color:var(--dashboard-border)] p-3">
                 <div
                   className={cn(
                     "flex items-center gap-2",
@@ -298,8 +314,10 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 >
                   <Button
                     className={cn(
-                      "h-11 rounded-2xl border-0 bg-[linear-gradient(135deg,#8b5cf6,#6366f1)] text-white hover:opacity-95",
-                      inboxesCollapsed ? "size-11 px-0" : "flex-1 justify-center",
+                      "h-10 rounded-[1rem] border-0 bg-[linear-gradient(135deg,#8b5cf6,#6366f1)] text-white hover:opacity-95",
+                      inboxesCollapsed
+                        ? "size-10 px-0"
+                        : "flex-1 justify-center",
                     )}
                     onClick={() => {
                       router.push("/dashboard/users");
@@ -314,7 +332,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    className="rounded-full border border-white/8 bg-white/[0.03] text-white/65 hover:bg-white/[0.08] hover:text-white"
+                    className={mailGhostButtonClass}
                     onClick={() => setInboxesCollapsed((previous) => !previous)}
                     aria-label={
                       inboxesCollapsed
@@ -331,47 +349,57 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-6 overflow-y-auto p-4">
+              <div className="flex-1 space-y-5 overflow-y-auto p-3">
                 {!inboxesCollapsed ? (
                   <>
                     <section className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-[color:var(--dashboard-text)]">
                             My Inboxes
                           </p>
-                          <p className="text-xs text-white/38">
+                          <p className={cn("text-xs", mailSoftTextClass)}>
                             {mailboxes.length} connected mailbox
                             {mailboxes.length === 1 ? "" : "es"}
                           </p>
                         </div>
-                        <Badge className="border-white/8 bg-white/[0.05] text-white/72 hover:bg-white/[0.05]">
+                        <Badge
+                          className={cn(
+                            mailInsetClass,
+                            "text-[color:var(--dashboard-text-muted)] hover:bg-[color:var(--dashboard-panel-soft)]",
+                          )}
+                        >
                           {filteredMailboxes.length}
                         </Badge>
                       </div>
 
                       <div className="relative">
-                        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                        <SearchIcon
+                          className={cn(
+                            "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2",
+                            mailSoftTextClass,
+                          )}
+                        />
                         <Input
                           value={inboxSidebarSearch}
                           onChange={(event) =>
                             setInboxSidebarSearch(event.target.value)
                           }
-                          className="h-10 rounded-2xl border-white/8 bg-white/[0.04] pl-9 text-white placeholder:text-white/32 focus-visible:border-white/15 focus-visible:ring-white/10"
+                          className={cn(mailInputClass, "pl-9")}
                           placeholder="Search inboxes"
                         />
                       </div>
 
                       {loadingMailboxes ? (
-                        <p className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                        <p className={mailPlaceholderClass}>
                           Loading inboxes...
                         </p>
                       ) : mailboxes.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                        <div className={mailPlaceholderClass}>
                           <p>No inboxes created yet.</p>
                           <Button
                             size="sm"
-                            className="mt-3 rounded-full bg-white text-[#0f1320] hover:bg-white/90"
+                            className="mt-3 rounded-full bg-[color:var(--dashboard-button)] text-[color:var(--dashboard-button-text)] hover:bg-[color:var(--dashboard-button)]/90"
                             onClick={() => {
                               router.push("/dashboard/users");
                               openCreateUserSheet();
@@ -381,7 +409,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                           </Button>
                         </div>
                       ) : filteredMailboxes.length === 0 ? (
-                        <p className="rounded-2xl border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                        <p className={mailPlaceholderClass}>
                           No inboxes match your search.
                         </p>
                       ) : (
@@ -399,16 +427,23 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                   setFolder("inbox");
                                 }}
                                 className={cn(
-                                  "flex w-full items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-left transition",
+                                  "flex w-full items-center gap-3 rounded-[1.05rem] border px-2.5 py-2.5 text-left transition",
                                   active
-                                    ? "border-violet-400/60 bg-[linear-gradient(180deg,rgba(139,92,246,0.16),rgba(59,63,110,0.16))] shadow-[0_20px_40px_-30px_rgba(139,92,246,0.9)]"
-                                    : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]",
+                                    ? "border-transparent shadow-[0_20px_40px_-30px_rgba(139,92,246,0.55)]"
+                                    : "border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] hover:bg-[color:var(--dashboard-hover)]",
                                 )}
+                                style={
+                                  active
+                                    ? {
+                                        background: "var(--dashboard-selected)",
+                                      }
+                                    : undefined
+                                }
                               >
-                                <Avatar className="size-10 rounded-2xl after:hidden">
+                                <Avatar className="size-9 rounded-[1rem] after:hidden">
                                   <AvatarFallback
                                     className={cn(
-                                      "rounded-2xl text-sm font-semibold",
+                                      "rounded-[1rem] text-sm font-semibold",
                                       mailboxTone,
                                     )}
                                   >
@@ -416,14 +451,19 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-white">
+                                  <p className="truncate text-sm font-medium text-[color:var(--dashboard-text)]">
                                     {mailbox.emailAddress}
                                   </p>
-                                  <p className="truncate text-xs text-white/40">
+                                  <p
+                                    className={cn(
+                                      "truncate text-xs",
+                                      mailSoftTextClass,
+                                    )}
+                                  >
                                     {getMailboxName(mailbox)}
                                   </p>
                                 </div>
-                                <span className="rounded-full bg-white/[0.08] px-2 py-1 text-xs font-medium text-white/78">
+                                <span className="rounded-full bg-[color:var(--dashboard-hover)] px-2 py-1 text-xs font-medium text-[color:var(--dashboard-text-muted)]">
                                   {mailbox.inboxCount}
                                 </span>
                               </button>
@@ -438,7 +478,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                           router.push("/dashboard/users");
                           openCreateUserSheet();
                         }}
-                        className="inline-flex items-center gap-2 text-sm text-violet-300 transition hover:text-violet-200"
+                        className="inline-flex items-center gap-2 text-sm text-[color:var(--dashboard-accent)] transition hover:opacity-85"
                       >
                         <PlusIcon className="size-4" />
                         Add inbox
@@ -447,10 +487,12 @@ export function DashboardClient({ tab }: DashboardClientProps) {
 
                     <section className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-[color:var(--dashboard-text)]">
                           Smart Views
                         </p>
-                        <span className="text-xs text-white/32">Live</span>
+                        <span className={cn("text-xs", mailSoftTextClass)}>
+                          Live
+                        </span>
                       </div>
 
                       <div className="space-y-2">
@@ -460,15 +502,15 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                           return (
                             <div
                               key={item.label}
-                              className="flex items-center gap-3 rounded-[1.15rem] border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                              className="flex items-center gap-3 rounded-[1rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-3 py-2"
                             >
-                              <span className="inline-flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-white/65">
+                              <span className="inline-flex size-7.5 items-center justify-center rounded-full bg-[color:var(--dashboard-hover)] text-[color:var(--dashboard-text-soft)]">
                                 <Icon className="size-4" />
                               </span>
-                              <span className="flex-1 text-sm text-white/72">
+                              <span className="flex-1 text-sm text-[color:var(--dashboard-text-muted)]">
                                 {item.label}
                               </span>
-                              <span className="rounded-full bg-white/[0.05] px-2 py-1 text-xs text-white/60">
+                              <span className="rounded-full bg-[color:var(--dashboard-hover)] px-2 py-1 text-xs text-[color:var(--dashboard-text-soft)]">
                                 {item.count}
                               </span>
                             </div>
@@ -479,20 +521,22 @@ export function DashboardClient({ tab }: DashboardClientProps) {
 
                     <section className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-[color:var(--dashboard-text)]">
                           Labels
                         </p>
-                        <PlusIcon className="size-4 text-white/32" />
+                        <PlusIcon className={cn("size-4", mailSoftTextClass)} />
                       </div>
 
                       <div className="space-y-2">
                         {MAIL_LABELS.map((item) => (
                           <div
                             key={item.label}
-                            className="flex items-center gap-3 rounded-[1.15rem] border border-white/8 bg-white/[0.03] px-3 py-2.5"
+                            className="flex items-center gap-3 rounded-[1rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-3 py-2"
                           >
-                            <span className={cn("size-3 rounded-full", item.color)} />
-                            <span className="text-sm text-white/72">
+                            <span
+                              className={cn("size-3 rounded-full", item.color)}
+                            />
+                            <span className="text-sm text-[color:var(--dashboard-text-muted)]">
                               {item.label}
                             </span>
                           </div>
@@ -516,15 +560,20 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                           }}
                           title={getMailboxName(mailbox)}
                           className={cn(
-                            "relative flex size-11 items-center justify-center rounded-2xl border transition",
+                            "relative flex size-10 items-center justify-center rounded-[1rem] border transition",
                             active
-                              ? "border-violet-400/60 bg-violet-500/15"
-                              : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]",
+                              ? "border-transparent"
+                              : "border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] hover:bg-[color:var(--dashboard-hover)]",
                           )}
+                          style={
+                            active
+                              ? { background: "var(--dashboard-selected)" }
+                              : undefined
+                          }
                         >
                           <span
                             className={cn(
-                              "inline-flex size-8 items-center justify-center rounded-xl text-xs font-semibold",
+                              "inline-flex size-7 items-center justify-center rounded-xl text-xs font-semibold",
                               mailboxTone,
                             )}
                           >
@@ -542,8 +591,8 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 )}
               </div>
 
-              <div className="border-t border-white/8 p-4">
-                <div className="rounded-[1.25rem] border border-white/8 bg-white/[0.03] p-3">
+              <div className="border-t border-[color:var(--dashboard-border)] p-3">
+                <div className="rounded-[1rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] p-3">
                   <div
                     className={cn(
                       "flex items-center gap-2",
@@ -553,25 +602,25 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                     {!inboxesCollapsed ? (
                       <>
                         <div>
-                          <p className="text-sm font-medium text-white">
+                          <p className="text-sm font-medium text-[color:var(--dashboard-text)]">
                             Queue volume
                           </p>
-                          <p className="text-xs text-white/38">
+                          <p className={cn("text-xs", mailSoftTextClass)}>
                             {totalMessageCount} synced message
                             {totalMessageCount === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <span className="text-xs text-white/45">
+                        <span className={cn("text-xs", mailSoftTextClass)}>
                           {Math.round(queueVolumePercent)}%
                         </span>
                       </>
                     ) : (
-                      <InboxIcon className="size-4 text-white/55" />
+                      <InboxIcon className={cn("size-4", mailSoftTextClass)} />
                     )}
                   </div>
 
                   {!inboxesCollapsed ? (
-                    <div className="mt-3 h-2 rounded-full bg-white/[0.06]">
+                    <div className="mt-3 h-2 rounded-full bg-[color:var(--dashboard-hover)]">
                       <div
                         className="h-2 rounded-full bg-[linear-gradient(90deg,#8b5cf6,#6366f1)]"
                         style={{ width: `${queueVolumePercent}%` }}
@@ -583,29 +632,34 @@ export function DashboardClient({ tab }: DashboardClientProps) {
             </div>
           </aside>
 
-          <section className="overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#11141d]/96 text-white shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]">
-            <div className="flex h-full min-h-[calc(100vh-15rem)] flex-col">
-              <div className="border-b border-white/8 p-4">
+          <section className={mailPanelClass}>
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="border-b border-[color:var(--dashboard-border)] p-3">
                 <div className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     {messagesCollapsed ? (
                       <div className="flex justify-center">
-                        <MailIcon className="size-4 text-white/65" />
+                        <MailIcon className={cn("size-4", mailSoftTextClass)} />
                       </div>
                     ) : (
                       <>
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-lg font-semibold text-white">
+                            <p className="truncate text-base font-semibold text-[color:var(--dashboard-text)]">
                               {selectedMailboxTitle}
                             </p>
-                            <p className="truncate text-xs text-white/38">
+                            <p
+                              className={cn(
+                                "truncate text-xs",
+                                mailSoftTextClass,
+                              )}
+                            >
                               {selectedMailbox?.emailAddress ||
                                 "Select an inbox to view messages"}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-violet-300">
+                            <span className="text-sm text-[color:var(--dashboard-accent)]">
                               {folder === "inbox"
                                 ? `${selectedMailbox?.inboxCount || unreadEmailCount} unread`
                                 : `${selectedMailbox?.sentCount || filteredEmails.length} sent`}
@@ -613,7 +667,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                             <Button
                               size="icon-sm"
                               variant="ghost"
-                              className="rounded-full text-white/55 hover:bg-white/[0.06] hover:text-white"
+                              className={mailGhostButtonClass}
                             >
                               <MoreHorizontalIcon />
                             </Button>
@@ -622,20 +676,28 @@ export function DashboardClient({ tab }: DashboardClientProps) {
 
                         <div className="mt-4 flex items-center gap-2">
                           <div className="relative flex-1">
-                            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                            <SearchIcon
+                              className={cn(
+                                "pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2",
+                                mailSoftTextClass,
+                              )}
+                            />
                             <Input
                               value={messagesSidebarSearch}
                               onChange={(event) =>
                                 setMessagesSidebarSearch(event.target.value)
                               }
-                              className="h-10 rounded-2xl border-white/8 bg-white/[0.04] pl-9 text-white placeholder:text-white/32 focus-visible:border-white/15 focus-visible:ring-white/10"
+                              className={cn(mailInputClass, "pl-9")}
                               placeholder="Search emails"
                             />
                           </div>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="rounded-2xl border border-white/8 bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white"
+                            className={cn(
+                              mailGhostButtonClass,
+                              "rounded-[1rem]",
+                            )}
                             onClick={() =>
                               selectedMailboxId
                                 ? void loadEmails(selectedMailboxId, folder)
@@ -658,9 +720,14 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                             className={cn(
                               "rounded-full border px-3 py-1.5 transition",
                               folder === "inbox"
-                                ? "border-violet-400/60 bg-violet-500/20 text-white"
-                                : "border-white/8 bg-transparent text-white/58 hover:bg-white/[0.06] hover:text-white",
+                                ? "border-transparent text-[color:var(--dashboard-text)]"
+                                : "border-[color:var(--dashboard-border)] bg-transparent text-[color:var(--dashboard-text-soft)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]",
                             )}
+                            style={
+                              folder === "inbox"
+                                ? { background: "var(--dashboard-selected)" }
+                                : undefined
+                            }
                           >
                             Inbox
                           </button>
@@ -670,16 +737,21 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                             className={cn(
                               "rounded-full border px-3 py-1.5 transition",
                               folder === "sent"
-                                ? "border-violet-400/60 bg-violet-500/20 text-white"
-                                : "border-white/8 bg-transparent text-white/58 hover:bg-white/[0.06] hover:text-white",
+                                ? "border-transparent text-[color:var(--dashboard-text)]"
+                                : "border-[color:var(--dashboard-border)] bg-transparent text-[color:var(--dashboard-text-soft)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]",
                             )}
+                            style={
+                              folder === "sent"
+                                ? { background: "var(--dashboard-selected)" }
+                                : undefined
+                            }
                           >
                             Sent
                           </button>
-                          <span className="rounded-full bg-white/[0.04] px-3 py-1.5 text-white/58">
+                          <span className="rounded-full bg-[color:var(--dashboard-panel-soft)] px-3 py-1.5 text-[color:var(--dashboard-text-soft)]">
                             Unread {unreadEmailCount}
                           </span>
-                          <span className="rounded-full bg-white/[0.04] px-3 py-1.5 text-white/58">
+                          <span className="rounded-full bg-[color:var(--dashboard-panel-soft)] px-3 py-1.5 text-[color:var(--dashboard-text-soft)]">
                             Attachments {attachmentEmailCount}
                           </span>
                         </div>
@@ -690,8 +762,10 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    className="rounded-full border border-white/8 bg-white/[0.03] text-white/65 hover:bg-white/[0.08] hover:text-white"
-                    onClick={() => setMessagesCollapsed((previous) => !previous)}
+                    className={mailGhostButtonClass}
+                    onClick={() =>
+                      setMessagesCollapsed((previous) => !previous)
+                    }
                     aria-label={
                       messagesCollapsed
                         ? "Expand messages sidebar"
@@ -707,17 +781,15 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-2">
+              <div className="flex-1 overflow-y-auto p-2.5">
                 {!selectedMailbox ? (
-                  <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                  <p className={mailPlaceholderClass}>
                     Choose an inbox from the left column to load messages.
                   </p>
                 ) : loadingEmails ? (
-                  <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
-                    Loading messages...
-                  </p>
+                  <p className={mailPlaceholderClass}>Loading messages...</p>
                 ) : filteredEmails.length === 0 ? (
-                  <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                  <p className={mailPlaceholderClass}>
                     No messages for this view.
                   </p>
                 ) : (
@@ -734,18 +806,23 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                           onClick={() => setSelectedEmailId(email.id)}
                           title={messagesCollapsed ? email.subject : undefined}
                           className={cn(
-                            "w-full rounded-[1.25rem] border transition",
+                            "w-full rounded-[1.05rem] border transition",
                             active
-                              ? "border-violet-400/60 bg-[linear-gradient(180deg,rgba(139,92,246,0.16),rgba(59,63,110,0.12))] shadow-[0_20px_40px_-30px_rgba(139,92,246,0.9)]"
-                              : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]",
-                            messagesCollapsed ? "px-0 py-3" : "px-3 py-3",
+                              ? "border-transparent shadow-[0_20px_40px_-30px_rgba(139,92,246,0.55)]"
+                              : "border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] hover:bg-[color:var(--dashboard-hover)]",
+                            messagesCollapsed ? "px-0 py-2.5" : "px-3 py-2.5",
                           )}
+                          style={
+                            active
+                              ? { background: "var(--dashboard-selected)" }
+                              : undefined
+                          }
                         >
                           {messagesCollapsed ? (
                             <div className="flex justify-center">
                               <span
                                 className={cn(
-                                  "inline-flex size-9 items-center justify-center rounded-2xl text-xs font-semibold",
+                                  "inline-flex size-8 items-center justify-center rounded-[1rem] text-xs font-semibold",
                                   tone,
                                 )}
                               >
@@ -754,7 +831,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                             </div>
                           ) : (
                             <div className="flex items-start gap-3 text-left">
-                              <Avatar className="size-10 rounded-full after:hidden">
+                              <Avatar className="size-9 rounded-full after:hidden">
                                 <AvatarFallback
                                   className={cn("text-sm font-semibold", tone)}
                                 >
@@ -764,27 +841,26 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
-                                    <p className="truncate text-sm font-medium text-white">
+                                    <p className="truncate text-sm font-medium text-[color:var(--dashboard-text)]">
                                       {sender.name}
                                     </p>
-                                    <p className="truncate text-sm font-semibold text-white">
+                                    <p className="truncate text-sm font-semibold text-[color:var(--dashboard-text)]">
                                       {email.subject}
                                     </p>
                                   </div>
-                                  <div className="flex shrink-0 items-center gap-2 text-xs text-white/40">
-                                    <span>{formatMessageTimestamp(email.createdAt)}</span>
+                                  <div className="flex shrink-0 items-center gap-2 text-xs text-[color:var(--dashboard-text-soft)]">
+                                    <span>
+                                      {formatMessageTimestamp(email.createdAt)}
+                                    </span>
                                     {!email.isRead ? (
                                       <span className="size-2 rounded-full bg-violet-400" />
                                     ) : null}
                                   </div>
                                 </div>
-                                <p className="mt-1 truncate text-sm text-white/42">
-                                  {buildSnippet(
-                                    getChatMessageBody(email),
-                                    88,
-                                  )}
+                                <p className="mt-1 truncate text-sm text-[color:var(--dashboard-text-soft)]">
+                                  {buildSnippet(getChatMessageBody(email), 88)}
                                 </p>
-                                <div className="mt-2 flex items-center gap-2 text-xs text-white/35">
+                                <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--dashboard-text-soft)]">
                                   {email.attachments.length > 0 ? (
                                     <span className="inline-flex items-center gap-1">
                                       <PaperclipIcon className="size-3.5" />
@@ -807,22 +883,22 @@ export function DashboardClient({ tab }: DashboardClientProps) {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#11141d]/96 text-white shadow-[0_30px_80px_-45px_rgba(0,0,0,0.9)]">
-            <div className="flex h-full min-h-[calc(100vh-15rem)] flex-col">
-              <div className="border-b border-white/8 px-5 py-4">
+          <section className={mailPanelClass}>
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="border-b border-[color:var(--dashboard-border)] px-4 py-3">
                 {selectedEmail ? (
                   <>
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-[1.75rem] font-semibold tracking-tight text-white">
+                          <h3 className="truncate text-[1.45rem] font-semibold tracking-tight text-[color:var(--dashboard-text)] sm:text-[1.6rem]">
                             {selectedEmail.subject}
                           </h3>
-                          <Badge className="border-violet-400/30 bg-violet-500/10 text-violet-200 hover:bg-violet-500/10">
+                          <Badge className="border-transparent bg-[color:var(--dashboard-accent-soft)] text-[color:var(--dashboard-accent)] hover:bg-[color:var(--dashboard-accent-soft)]">
                             {folder === "inbox" ? "Inbox" : "Sent"}
                           </Badge>
                         </div>
-                        <p className="mt-1 text-sm text-white/40">
+                        <p className={cn("mt-1 text-sm", mailSoftTextClass)}>
                           Thread participants:{" "}
                           {Array.from(getEmailParticipants(selectedEmail)).join(
                             ", ",
@@ -834,14 +910,14 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          className="rounded-full border border-white/8 bg-white/[0.03] text-white/55 hover:bg-white/[0.08] hover:text-white"
+                          className={mailGhostButtonClass}
                         >
                           <StarIcon />
                         </Button>
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          className="rounded-full border border-white/8 bg-white/[0.03] text-white/55 hover:bg-white/[0.08] hover:text-white"
+                          className={mailGhostButtonClass}
                         >
                           <ArchiveIcon />
                         </Button>
@@ -851,7 +927,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                               <Button
                                 size="icon-sm"
                                 variant="ghost"
-                                className="rounded-full border border-white/8 bg-white/[0.03] text-white/55 hover:bg-white/[0.08] hover:text-white"
+                                className={mailGhostButtonClass}
                               />
                             }
                           >
@@ -879,7 +955,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <Avatar className="size-11 rounded-full after:hidden">
+                        <Avatar className="size-10 rounded-full after:hidden">
                           <AvatarFallback
                             className={cn(
                               "text-sm font-semibold",
@@ -892,15 +968,20 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-white">
+                          <p className="truncate text-sm font-medium text-[color:var(--dashboard-text)]">
                             {selectedSender?.name || selectedEmail.from}
                           </p>
-                          <p className="truncate text-xs text-white/42">
+                          <p
+                            className={cn(
+                              "truncate text-xs",
+                              mailSoftTextClass,
+                            )}
+                          >
                             {selectedSender?.email || selectedEmail.from}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right text-sm text-white/42">
+                      <div className="text-right text-sm text-[color:var(--dashboard-text-soft)]">
                         <p>{formatTimeOnly(selectedEmail.createdAt)}</p>
                         {selectedRecipients.length > 0 ? (
                           <p className="mt-1 max-w-[24rem] truncate text-xs">
@@ -912,30 +993,32 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                   </>
                 ) : (
                   <>
-                    <h3 className="text-lg font-semibold text-white">
+                    <h3 className="text-lg font-semibold text-[color:var(--dashboard-text)]">
                       Select a message
                     </h3>
-                    <p className="mt-1 text-sm text-white/42">
+                    <p className={cn("mt-1 text-sm", mailSoftTextClass)}>
                       Choose an email from the middle column to open the thread.
                     </p>
                   </>
                 )}
               </div>
 
-              <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
                 {selectedEmail ? (
                   <>
                     {loadingThread ? (
-                      <p className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                      <p className={mailPlaceholderClass}>
                         Loading thread messages...
                       </p>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {threadEmails.map((threadEmail) => {
                           const isSentMessage = threadEmail.kind === "sent";
                           const canReplyToThis = threadEmail.kind === "inbound";
                           const sender = splitAddress(
-                            isSentMessage ? user.email || "You" : threadEmail.from,
+                            isSentMessage
+                              ? user.email || "You"
+                              : threadEmail.from,
                           );
 
                           return (
@@ -948,10 +1031,10 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                             >
                               <article
                                 className={cn(
-                                  "max-w-[85%] rounded-[1.5rem] border px-4 py-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.95)]",
+                                  "max-w-[85%] rounded-[1.2rem] border px-3.5 py-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.95)]",
                                   isSentMessage
                                     ? "border-violet-400/25 bg-[linear-gradient(135deg,rgba(109,40,217,0.72),rgba(99,102,241,0.7))] text-white"
-                                    : "border-white/8 bg-white/[0.05] text-white",
+                                    : "border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] text-[color:var(--dashboard-text)]",
                                 )}
                               >
                                 <div className="mb-2 flex items-start justify-between gap-3">
@@ -978,10 +1061,12 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                             "text-xs",
                                             isSentMessage
                                               ? "text-white/70"
-                                              : "text-white/38",
+                                              : "text-[color:var(--dashboard-text-soft)]",
                                           )}
                                         >
-                                          {formatTimeOnly(threadEmail.createdAt)}
+                                          {formatTimeOnly(
+                                            threadEmail.createdAt,
+                                          )}
                                         </p>
                                       </div>
                                     </div>
@@ -997,7 +1082,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                             "size-7 rounded-full",
                                             isSentMessage
                                               ? "text-white/72 hover:bg-white/10 hover:text-white"
-                                              : "text-white/45 hover:bg-white/[0.08] hover:text-white",
+                                              : "text-[color:var(--dashboard-text-soft)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]",
                                           )}
                                         />
                                       }
@@ -1014,7 +1099,9 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                           if (!canReplyToThis) {
                                             return;
                                           }
-                                          setReplyTargetInboundId(threadEmail.id);
+                                          setReplyTargetInboundId(
+                                            threadEmail.id,
+                                          );
                                           setReplyAll(false);
                                           setStatusMessage(
                                             "Reply mode: specific recipient",
@@ -1029,7 +1116,9 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                           if (!canReplyToThis) {
                                             return;
                                           }
-                                          setReplyTargetInboundId(threadEmail.id);
+                                          setReplyTargetInboundId(
+                                            threadEmail.id,
+                                          );
                                           setReplyAll(true);
                                           setStatusMessage(
                                             "Reply mode: reply all recipients",
@@ -1045,7 +1134,9 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                                 <pre
                                   className={cn(
                                     "whitespace-pre-wrap text-sm leading-7",
-                                    isSentMessage ? "text-white" : "text-white/82",
+                                    isSentMessage
+                                      ? "text-white"
+                                      : "text-[color:var(--dashboard-text-muted)]",
                                   )}
                                 >
                                   {getChatMessageBody(threadEmail)}
@@ -1053,52 +1144,57 @@ export function DashboardClient({ tab }: DashboardClientProps) {
 
                                 {threadEmail.attachments.length > 0 ? (
                                   <div className="mt-3 space-y-2">
-                                    {threadEmail.attachments.map((attachment) => (
-                                      <div
-                                        key={attachment.id}
-                                        className={cn(
-                                          "flex items-center justify-between rounded-[1rem] border px-3 py-2 text-sm",
-                                          isSentMessage
-                                            ? "border-white/12 bg-black/10"
-                                            : "border-white/8 bg-white/[0.04]",
-                                        )}
-                                      >
-                                        <div className="min-w-0">
-                                          <p className="truncate font-medium">
-                                            {attachment.filename || "attachment"}
-                                          </p>
-                                          <p
-                                            className={cn(
-                                              "text-xs",
-                                              isSentMessage
-                                                ? "text-white/72"
-                                                : "text-white/40",
-                                            )}
-                                          >
-                                            {formatBytes(attachment.sizeBytes)}
-                                          </p>
+                                    {threadEmail.attachments.map(
+                                      (attachment) => (
+                                        <div
+                                          key={attachment.id}
+                                          className={cn(
+                                            "flex items-center justify-between rounded-[0.9rem] border px-3 py-2 text-sm",
+                                            isSentMessage
+                                              ? "border-white/12 bg-black/10"
+                                              : "border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-hover)]",
+                                          )}
+                                        >
+                                          <div className="min-w-0">
+                                            <p className="truncate font-medium">
+                                              {attachment.filename ||
+                                                "attachment"}
+                                            </p>
+                                            <p
+                                              className={cn(
+                                                "text-xs",
+                                                isSentMessage
+                                                  ? "text-white/72"
+                                                  : "text-[color:var(--dashboard-text-soft)]",
+                                              )}
+                                            >
+                                              {formatBytes(
+                                                attachment.sizeBytes,
+                                              )}
+                                            </p>
+                                          </div>
+                                          {attachment.hasDownload ? (
+                                            <a
+                                              className={cn(
+                                                "text-xs font-semibold underline underline-offset-4",
+                                                isSentMessage
+                                                  ? "text-white"
+                                                  : "text-violet-200",
+                                              )}
+                                              href={attachment.downloadPath}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                            >
+                                              Download
+                                            </a>
+                                          ) : (
+                                            <span className="text-xs text-[color:var(--dashboard-text-soft)]">
+                                              No file
+                                            </span>
+                                          )}
                                         </div>
-                                        {attachment.hasDownload ? (
-                                          <a
-                                            className={cn(
-                                              "text-xs font-semibold underline underline-offset-4",
-                                              isSentMessage
-                                                ? "text-white"
-                                                : "text-violet-200",
-                                            )}
-                                            href={attachment.downloadPath}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                          >
-                                            Download
-                                          </a>
-                                        ) : (
-                                          <span className="text-xs text-white/40">
-                                            No file
-                                          </span>
-                                        )}
-                                      </div>
-                                    ))}
+                                      ),
+                                    )}
                                   </div>
                                 ) : null}
                               </article>
@@ -1109,32 +1205,34 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                     )}
                   </>
                 ) : (
-                  <div className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                  <div className={mailPlaceholderClass}>
                     Click an email to open its conversation here.
                   </div>
                 )}
               </div>
 
-              <div className="border-t border-white/8 p-4">
+              <div className="border-t border-[color:var(--dashboard-border)] p-3">
                 {replyTargetEmail ? (
-                  <div className="rounded-[1.25rem] border border-white/8 bg-[#0d1119]">
-                    <div className="flex items-center gap-6 border-b border-white/8 px-4 py-3 text-sm">
-                      <span className="font-medium text-violet-300">Reply</span>
-                      <span className="text-white/35">Internal Note</span>
+                  <div className="rounded-[1rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-composer)]">
+                    <div className="flex items-center gap-6 border-b border-[color:var(--dashboard-border)] px-4 py-3 text-sm">
+                      <span className="font-medium text-[color:var(--dashboard-accent)]">
+                        Reply
+                      </span>
+                      <span className={mailSoftTextClass}>Internal Note</span>
                     </div>
-                    <div className="space-y-3 px-4 py-4">
-                      <p className="text-xs text-white/42">
+                    <div className="space-y-3 px-4 py-3.5">
+                      <p className={cn("text-xs", mailSoftTextClass)}>
                         Replying to {replyTargetEmail.from} ·{" "}
                         {formatMessageTimestamp(replyTargetEmail.createdAt)}
                       </p>
                       <textarea
-                        className="min-h-28 w-full resize-none rounded-[1rem] border border-white/8 bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/28 focus-visible:border-violet-400/40"
+                        className="min-h-24 w-full resize-none rounded-[0.95rem] border border-[color:var(--dashboard-border)] bg-transparent px-3.5 py-3 text-sm text-[color:var(--dashboard-text)] outline-none placeholder:text-[color:var(--dashboard-text-soft)]"
                         placeholder="Type your reply..."
                         value={replyBody}
                         onChange={(event) => setReplyBody(event.target.value)}
                       />
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <label className="flex items-center gap-2 text-xs text-white/48">
+                        <label className="flex items-center gap-2 text-xs text-[color:var(--dashboard-text-soft)]">
                           <input
                             type="checkbox"
                             checked={replyAll}
@@ -1147,9 +1245,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                         <Button
                           className="rounded-full bg-[linear-gradient(135deg,#8b5cf6,#6366f1)] text-white hover:opacity-95"
                           onClick={() => void handleReply()}
-                          disabled={
-                            busyAction === "reply" || !replyBody.trim()
-                          }
+                          disabled={busyAction === "reply" || !replyBody.trim()}
                         >
                           <SendHorizontalIcon />
                           {busyAction === "reply" ? "Sending..." : "Send"}
@@ -1158,7 +1254,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-[1.25rem] border border-dashed border-white/8 bg-white/[0.03] px-3 py-4 text-sm text-white/48">
+                  <div className={mailPlaceholderClass}>
                     Select an inbound thread message to enable quick reply.
                   </div>
                 )}
@@ -1240,7 +1336,7 @@ export function DashboardClient({ tab }: DashboardClientProps) {
                 </label>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-zinc-200">
+              <div className="overflow-hidden rounded-xl border border-zinc-700 p-2">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1367,7 +1463,6 @@ export function DashboardClient({ tab }: DashboardClientProps) {
               </div>
             </CardContent>
           </Card>
-
           <Sheet
             open={createUserSheetOpen}
             onOpenChange={setCreateUserSheetOpen}

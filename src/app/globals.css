@@ -152,6 +152,50 @@
 }
 
 @layer utilities {
+  .dashboard-app {
+    --dashboard-app-bg:
+      radial-gradient(circle at top, rgba(99, 102, 241, 0.12), transparent 28%),
+      linear-gradient(180deg, #eef3fb 0%, #f8fafc 100%);
+    --dashboard-shell: rgba(255, 255, 255, 0.84);
+    --dashboard-shell-strong: rgba(255, 255, 255, 0.92);
+    --dashboard-panel: rgba(255, 255, 255, 0.82);
+    --dashboard-panel-soft: rgba(248, 250, 252, 0.94);
+    --dashboard-border: rgba(15, 23, 42, 0.09);
+    --dashboard-text: #0f172a;
+    --dashboard-text-muted: rgba(15, 23, 42, 0.68);
+    --dashboard-text-soft: rgba(15, 23, 42, 0.46);
+    --dashboard-hover: rgba(99, 102, 241, 0.08);
+    --dashboard-accent: #6d28d9;
+    --dashboard-accent-soft: rgba(109, 40, 217, 0.14);
+    --dashboard-selected:
+      linear-gradient(180deg, rgba(109, 40, 217, 0.12), rgba(99, 102, 241, 0.08));
+    --dashboard-button: #ffffff;
+    --dashboard-button-text: #0f172a;
+    --dashboard-composer: rgba(255, 255, 255, 0.96);
+  }
+
+  .dark .dashboard-app {
+    --dashboard-app-bg:
+      radial-gradient(circle at top, rgba(99, 102, 241, 0.34), transparent 30%),
+      linear-gradient(180deg, #3f3792 0%, #1a1d39 22%, #090b12 100%);
+    --dashboard-shell: rgba(7, 10, 17, 0.95);
+    --dashboard-shell-strong: rgba(9, 12, 20, 0.97);
+    --dashboard-panel: rgba(17, 20, 29, 0.96);
+    --dashboard-panel-soft: rgba(255, 255, 255, 0.03);
+    --dashboard-border: rgba(255, 255, 255, 0.08);
+    --dashboard-text: #f8fafc;
+    --dashboard-text-muted: rgba(248, 250, 252, 0.72);
+    --dashboard-text-soft: rgba(248, 250, 252, 0.42);
+    --dashboard-hover: rgba(255, 255, 255, 0.08);
+    --dashboard-accent: #c4b5fd;
+    --dashboard-accent-soft: rgba(139, 92, 246, 0.2);
+    --dashboard-selected:
+      linear-gradient(180deg, rgba(139, 92, 246, 0.16), rgba(59, 63, 110, 0.12));
+    --dashboard-button: #ffffff;
+    --dashboard-button-text: #090d17;
+    --dashboard-composer: #0d1119;
+  }
+
   .vibe-shell {
     @apply border border-white/60 bg-white/68 shadow-[0_18px_70px_-28px_rgba(15,23,42,0.5)] backdrop-blur-2xl;
   }

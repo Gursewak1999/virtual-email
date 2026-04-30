@@ -7,7 +7,6 @@ import {
   BellIcon,
   ChevronDownIcon,
   LogOutIcon,
-  SearchIcon,
   Settings2Icon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { cn } from "@/lib/utils";
 
 interface DashboardNavProps {
@@ -61,8 +60,6 @@ export function DashboardNav({ children }: DashboardNavProps) {
     activeWorkspaceInfo,
     setActiveWorkspace,
     user,
-    searchQuery,
-    setSearchQuery,
     totalUnread,
     notificationItems,
     setSelectedMailboxId,
@@ -93,33 +90,33 @@ export function DashboardNav({ children }: DashboardNavProps) {
   const userInitials = getInitials(user.name);
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto ">
-        <div className="overflow-hidden  border-white/10 bg-[#070a11]/95 shadow-[0_32px_120px_-48px_rgba(15,23,42,0.95)]">
-          <header className="border-b border-white/10 px-4 py-4 text-white sm:px-6">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
+    <div className="dashboard-app h-dvh overflow-hidden">
+      <div className="h-full w-full">
+        <div className="mx-auto flex h-full flex-col overflow-hidden bg-[color:var(--dashboard-shell)] shadow-[0_24px_90px_-50px_rgba(15,23,42,0.42)] ">
+          <header className="shrink-0 border-b border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-shell-strong)] px-3 py-2.5 sm:px-4">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
               <div className="flex items-center gap-3">
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
                       <Button
                         variant="ghost"
-                        className="h-auto justify-start rounded-[1.25rem] border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-white hover:bg-white/[0.07] hover:text-white"
+                        className="h-auto justify-start rounded-[1rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-2.5 py-1.5 text-left text-[color:var(--dashboard-text)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
                       />
                     }
                   >
-                    <div className="flex size-11 items-center justify-center rounded-2xl bg-white text-[#0b1020] shadow-[0_10px_30px_-18px_rgba(255,255,255,0.9)]">
+                    <div className="flex size-9 items-center justify-center rounded-xl bg-[color:var(--dashboard-button)] text-[color:var(--dashboard-button-text)] shadow-[0_10px_30px_-20px_rgba(15,23,42,0.28)]">
                       <CommandIcon className="size-4" />
                     </div>
                     <div className="grid min-w-0 flex-1 leading-tight">
-                      <span className="truncate text-base font-semibold tracking-tight">
-                        IRCC Dashboard
+                      <span className="truncate text-sm font-semibold tracking-tight">
+                        Active Dashboard
                       </span>
-                      <span className="truncate text-xs text-white/55">
-                        {activeWorkspaceInfo.title}
+                      <span className="truncate text-[11px] text-[color:var(--dashboard-text-soft)]">
+                        {activePage} · {activeWorkspaceInfo.title}
                       </span>
                     </div>
-                    <ChevronDownIcon className="size-4 text-white/60" />
+                    <ChevronDownIcon className="size-4 text-[color:var(--dashboard-text-soft)]" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-72">
                     <DropdownMenuLabel>Switch Workspace</DropdownMenuLabel>
@@ -144,7 +141,7 @@ export function DashboardNav({ children }: DashboardNavProps) {
               </div>
 
               <nav
-                className="mx-auto flex w-full max-w-fit items-center justify-center gap-2 overflow-x-auto rounded-full border border-white/10 bg-white/[0.04] px-2 py-2"
+                className="mx-auto flex w-full max-w-fit items-center justify-center gap-1.5 overflow-x-auto rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-1.5 py-1.5"
                 aria-label="Dashboard sections"
               >
                 {dashboardShellNavItems.map((item) => {
@@ -162,10 +159,10 @@ export function DashboardNav({ children }: DashboardNavProps) {
                         }
                       }}
                       className={cn(
-                        "relative flex size-11 shrink-0 items-center justify-center rounded-full border transition duration-200",
+                        "relative flex size-9 shrink-0 items-center justify-center rounded-full border transition duration-200",
                         active
-                          ? "border-white bg-white text-[#090d17] shadow-[0_14px_28px_-18px_rgba(255,255,255,0.95)]"
-                          : "border-white/10 bg-transparent text-white/68 hover:bg-white/[0.08] hover:text-white",
+                          ? "border-accent border-2 bg-[color:var(--dashboard-button)] text-[color:var(--dashboard-button-text)] shadow-[0_12px_24px_-18px_rgba(15,23,42,0.4)]"
+                          : "border-[color:var(--dashboard-border)] bg-transparent text-[color:var(--dashboard-text-muted)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]",
                       )}
                     >
                       <Icon className="size-4" />
@@ -182,23 +179,15 @@ export function DashboardNav({ children }: DashboardNavProps) {
 
               <div className="flex flex-col gap-3 lg:items-end">
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  {/* <div className="relative w-full min-w-[220px] max-w-sm">
-                    <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/45" />
-                    <Input
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      className="h-11 rounded-full border-white/10 bg-white/[0.04] pl-9 text-white placeholder:text-white/40 focus-visible:border-white/20 focus-visible:ring-white/15"
-                      placeholder="Search inboxes, senders, or IDs"
-                    />
-                  </div> */}
+                  <ThemeToggleButton />
 
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
                         <Button
-                          size="icon"
+                          size="icon-sm"
                           variant="ghost"
-                          className="relative rounded-full border border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white"
+                          className="relative rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] text-[color:var(--dashboard-text-muted)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
                         />
                       }
                     >
@@ -252,20 +241,20 @@ export function DashboardNav({ children }: DashboardNavProps) {
                       render={
                         <Button
                           variant="ghost"
-                          className="h-auto rounded-full border border-white/10 bg-white/[0.04] px-2 py-1.5 text-white hover:bg-white/[0.08] hover:text-white"
+                          className="h-auto rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-1.5 py-1 text-[color:var(--dashboard-text)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
                         />
                       }
                     >
                       <Avatar size="lg" className="ring-2 ring-white/10">
-                        <AvatarFallback className="bg-white/10 text-white">
+                        <AvatarFallback className="bg-[color:var(--dashboard-hover)] text-[color:var(--dashboard-text)]">
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="hidden min-w-0 text-left sm:grid">
-                        <span className="truncate text-sm font-medium">
+                        <span className="truncate text-xs font-medium">
                           {user.name || "Operator"}
                         </span>
-                        <span className="truncate text-xs text-white/50">
+                        <span className="truncate text-[11px] text-[color:var(--dashboard-text-soft)]">
                           {user.email || "No email"}
                         </span>
                       </div>
@@ -306,36 +295,17 @@ export function DashboardNav({ children }: DashboardNavProps) {
             </div>
           </header>
 
-          <div className="px-3 pb-4 pt-4 sm:px-4 lg:px-5">
-            {/* <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/70">
-              <div>
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-white/35">
-                  Command Center
-                </p>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight text-white">
-                  {activePage}
-                </h1>
-              </div>
+          <main className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2.5 sm:px-3.5 lg:px-4">
+            <div className="mx-auto flex h-full min-h-0 flex-col">
+              {children}
+            </div>
+          </main>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className="border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.06]">
-                  {selectedMailbox?.emailAddress || "No inbox selected"}
-                </Badge>
-                <Badge className="border-white/10 bg-white/[0.06] text-white/80 hover:bg-white/[0.06]">
-                  Folder {folder.toUpperCase()}
-                </Badge>
-                <span className="max-w-xl truncate text-xs text-white/45">
-                  {statusMessage}
-                </span>
-              </div>
-            </div> */}
-
-            {children}
-          </div>
-
-          <footer className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs text-white/45 md:px-6">
+          <footer className="shrink-0 border-t border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-shell-strong)] px-3 py-2 text-[11px] text-[color:var(--dashboard-text-soft)] sm:px-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span>{statusMessage}</span>
+              <span>
+                {activePage} · {statusMessage}
+              </span>
               <span>
                 Active inbox: {selectedMailbox?.emailAddress || "none"} ·
                 Folder: {folder.toUpperCase()} · Unread: {totalUnread}

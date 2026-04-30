@@ -444,60 +444,59 @@ export function ConsultationsDashboardClient() {
           {errorMessage}
         </div>
       ) : null}
-
-      <div className="border border-zinc-200 bg-white p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={() => setCreateDialogOpen(true)}>
+          <PlusIcon />
+          Add Consultation
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setAvailabilitySheetOpen(true)}
+        >
+          <Settings2Icon />
+          Availability Settings
+        </Button>
+        {hostProfile?.bookingUrl ? (
+          <>
+            <Button
+              variant="outline"
+              onClick={() =>
+                void copyToClipboard(
+                  hostProfile.bookingUrl || "",
+                  "Booking link",
+                )
+              }
+            >
+              <CopyIcon />
+              Copy Booking Link
+            </Button>
+            <a
+              className={cn(buttonVariants({ variant: "outline" }))}
+              href={hostProfile.bookingUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLinkIcon />
+              Open Booking Page
+            </a>
+          </>
+        ) : null}
+      </div>
+      {/* <div className="border border-zinc-200 rounded-xl p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700">
+            <Button variant="outline" size={"xs"} onClick={() => {}}>
               <VideoIcon className="size-3.5" />
               Consultations
-            </div>
+            </Button>
+
             <h1 className="text-2xl font-semibold text-zinc-900">
               Consultation Management
             </h1>
-            <p className="max-w-2xl text-sm text-zinc-600">
+            <p className="max-w-2xl text-sm ">
               Default view shows upcoming consultations first with separate
               history, searchable results, and paginated records.
             </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <PlusIcon />
-              Add Consultation
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setAvailabilitySheetOpen(true)}
-            >
-              <Settings2Icon />
-              Availability Settings
-            </Button>
-            {hostProfile?.bookingUrl ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    void copyToClipboard(
-                      hostProfile.bookingUrl || "",
-                      "Booking link",
-                    )
-                  }
-                >
-                  <CopyIcon />
-                  Copy Booking Link
-                </Button>
-                <a
-                  className={cn(buttonVariants({ variant: "outline" }))}
-                  href={hostProfile.bookingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <ExternalLinkIcon />
-                  Open Booking Page
-                </a>
-              </>
-            ) : null}
           </div>
         </div>
 
@@ -539,9 +538,9 @@ export function ConsultationsDashboardClient() {
             </CardHeader>
           </Card>
         </div>
-      </div>
+      </div> */}
 
-      <Card className="rounded-none shadow-none">
+      <Card className="rounded-xl shadow-none">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -571,7 +570,7 @@ export function ConsultationsDashboardClient() {
 
         <CardContent className="space-y-6">
           {loading ? (
-            <p className="border border-dashed border-zinc-300 bg-white px-3 py-4 text-sm text-zinc-600">
+            <p className="border border-dashed border-zinc-300  px-3 py-4 text-sm ">
               Loading consultation records...
             </p>
           ) : (
@@ -587,7 +586,7 @@ export function ConsultationsDashboardClient() {
                 </div>
 
                 {upcomingVisible.length === 0 ? (
-                  <p className="border border-dashed border-zinc-300 bg-white px-3 py-4 text-sm text-zinc-600">
+                  <p className="border border-dashed border-zinc-300 px-3 rounded-xl py-4 text-sm ">
                     No upcoming consultations found.
                   </p>
                 ) : (
@@ -598,7 +597,7 @@ export function ConsultationsDashboardClient() {
                       return (
                         <article
                           key={consultation.id}
-                          className="cursor-pointer border border-zinc-200 bg-white p-4 transition hover:border-zinc-300"
+                          className="cursor-pointer border border-zinc-200 rounded-xl p-4 transition hover:border-zinc-300"
                           onClick={() => setSelectedConsultation(consultation)}
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -617,7 +616,7 @@ export function ConsultationsDashboardClient() {
                                   )}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-zinc-600">
+                              <p className="text-sm ">
                                 {consultation.attendeeEmail}
                                 {consultation.attendeePhone
                                   ? ` · ${consultation.attendeePhone}`
@@ -691,7 +690,7 @@ export function ConsultationsDashboardClient() {
 
               <section className="space-y-3 border-t pt-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-600">
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] ">
                     Other Consultations ({otherConsultations.length})
                   </h3>
                   <p className="text-xs text-zinc-500">
@@ -700,7 +699,7 @@ export function ConsultationsDashboardClient() {
                 </div>
 
                 {othersVisible.length === 0 ? (
-                  <p className="border border-dashed border-zinc-300 bg-white px-3 py-4 text-sm text-zinc-600">
+                  <p className="border border-dashed border-zinc-300  rounded-xl px-3 py-4 text-sm ">
                     No other consultations found.
                   </p>
                 ) : (
@@ -711,13 +710,13 @@ export function ConsultationsDashboardClient() {
                       return (
                         <article
                           key={consultation.id}
-                          className="cursor-pointer border border-zinc-200 bg-white p-4 transition hover:border-zinc-300"
+                          className="cursor-pointer border border-zinc-200 rounded-xl p-4 transition hover:border-zinc-300"
                           onClick={() => setSelectedConsultation(consultation)}
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-base font-semibold text-zinc-900">
+                                <h3 className="text-base font-semibold ">
                                   {consultation.attendeeName}
                                 </h3>
                                 <Badge
@@ -730,13 +729,13 @@ export function ConsultationsDashboardClient() {
                                   )}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-zinc-600">
+                              <p className="text-sm ">
                                 {consultation.attendeeEmail}
                                 {consultation.attendeePhone
                                   ? ` · ${consultation.attendeePhone}`
                                   : ""}
                               </p>
-                              <p className="text-sm text-zinc-700">
+                              <p className="text-sm text-zinc-500">
                                 {formatDateTimeLabel(consultation.scheduledAt)}
                               </p>
                             </div>
@@ -941,7 +940,7 @@ export function ConsultationsDashboardClient() {
                 return (
                   <div
                     key={day.dayOfWeek}
-                    className="border border-zinc-200 bg-white px-3 py-3"
+                    className="border border-zinc-200 px-3 py-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <label className="flex items-center gap-2 text-sm font-medium text-zinc-900">
@@ -1078,14 +1077,14 @@ export function ConsultationsDashboardClient() {
               </SheetHeader>
 
               <div className="space-y-4 p-4">
-                <div className="border border-zinc-200 bg-white p-3 text-sm">
+                <div className="border border-zinc-200 p-3 text-sm">
                   <p className="font-medium text-zinc-900">
                     {selectedConsultation.attendeeName}
                   </p>
                   <p className="text-zinc-700">
                     {selectedConsultation.attendeeEmail}
                   </p>
-                  <p className="text-zinc-600">
+                  <p className="">
                     {selectedConsultation.attendeePhone || "No phone"}
                   </p>
                 </div>
