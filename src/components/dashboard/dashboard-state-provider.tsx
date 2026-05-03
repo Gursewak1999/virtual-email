@@ -511,8 +511,29 @@ function useDashboardStateValue() {
       return;
     }
 
-    void loadThreadEmails(selectedMailboxId, selectedEmail);
-  }, [loadThreadEmails, selectedEmail, selectedMailboxId]);
+    void (async () => {
+      await markEmailAsRead(selectedEmail);
+      await loadThreadEmails(selectedMailboxId, selectedEmail);
+    })();
+  }, [loadThreadEmails, markEmailAsRead, selectedEmail, selectedMailboxId]);
+
+  useEffect(() => {
+    if (!selectedMailboxId || threadEmails.length === 0) {
+      return;
+    }
+
+    const unreadInboundEmails = threadEmails.filter(
+      (email) => email.kind === "inbound" && !email.isRead,
+    );
+
+    if (unreadInboundEmails.length === 0) {
+      return;
+    }
+
+    void Promise.all(
+      unreadInboundEmails.map((email) => markEmailAsRead(email)),
+    );
+  }, [markEmailAsRead, selectedMailboxId, threadEmails]);
 
   useEffect(() => {
     if (usersPage > usersTotalPages) {
