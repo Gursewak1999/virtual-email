@@ -37,16 +37,14 @@ export function ActivityDashboardClient() {
                 recentActivity.map((event) => (
                   <div
                     key={event.id}
-                    className="flex items-start gap-2 rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5"
+                    className="flex items-start gap-2 rounded-xl border px-3 py-2.5"
                   >
                     <span className="mt-1 inline-flex size-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                       <CheckCheckIcon className="size-3.5" />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-zinc-900">
-                        {event.label}
-                      </p>
-                      <p className="text-xs text-zinc-500">{event.timestamp}</p>
+                      <p className="text-sm font-semibold">{event.label}</p>
+                      <p className="text-xs ">{event.timestamp}</p>
                     </div>
                   </div>
                 ))
@@ -62,28 +60,28 @@ export function ActivityDashboardClient() {
               Live summary across all mailbox queues.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-zinc-700">
-            <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+          <CardContent className="space-y-2 text-sm ">
+            <div className="rounded-xl border  p-3">
+              <p className="text-xs uppercase tracking-[0.12em] ">
                 Active Mailboxes
               </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-900">
+              <p className="mt-1 text-2xl font-semibold ">
                 {dashboardMetrics.activeMailboxes}
               </p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+            <div className="rounded-xl border  p-3">
+              <p className="text-xs uppercase tracking-[0.12em] ">
                 Inbound Queue
               </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-900">
+              <p className="mt-1 text-2xl font-semibold ">
                 {dashboardMetrics.totalInbox}
               </p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+            <div className="rounded-xl border  p-3">
+              <p className="text-xs uppercase tracking-[0.12em] ">
                 Sent Throughput
               </p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-900">
+              <p className="mt-1 text-2xl font-semibold ">
                 {dashboardMetrics.totalSent}
               </p>
             </div>

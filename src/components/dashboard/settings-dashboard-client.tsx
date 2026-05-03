@@ -28,16 +28,16 @@ export function SettingsDashboardClient() {
               Configure default behavior for notifications and inbox workflow.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-zinc-700">
-            <label className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white/80 px-3 py-2">
+          <CardContent className="space-y-3 text-sm ">
+            <label className="flex items-center gap-2 rounded-lg border  px-3 py-2">
               <input type="checkbox" defaultChecked />
               Auto-refresh active inbox every 60 seconds
             </label>
-            <label className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white/80 px-3 py-2">
+            <label className="flex items-center gap-2 rounded-lg border  px-3 py-2">
               <input type="checkbox" defaultChecked />
               Show popup notifications for new inbound emails
             </label>
-            <label className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white/80 px-3 py-2">
+            <label className="flex items-center gap-2 rounded-lg border  px-3 py-2">
               <input type="checkbox" />
               Require confirmation before sending replies
             </label>
@@ -52,13 +52,11 @@ export function SettingsDashboardClient() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="rounded-xl border border-zinc-200 bg-white/80 p-3">
-              <p className="text-sm font-semibold text-zinc-900">
+            <div className="rounded-xl border  p-3">
+              <p className="text-sm font-semibold ">
                 {user.name || "Operator"}
               </p>
-              <p className="text-xs text-zinc-600">
-                {user.email || "No email"}
-              </p>
+              <p className="text-xs ">{user.email || "No email"}</p>
             </div>
 
             <Button

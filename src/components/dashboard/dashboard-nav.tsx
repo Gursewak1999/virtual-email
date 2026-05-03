@@ -96,48 +96,8 @@ export function DashboardNav({ children }: DashboardNavProps) {
           <header className="shrink-0 border-b border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-shell-strong)] px-3 py-2.5 sm:px-4">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
               <div className="flex items-center gap-3">
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        className="h-auto justify-start rounded-[1rem] border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-2.5 py-1.5 text-left text-[color:var(--dashboard-text)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
-                      />
-                    }
-                  >
-                    <div className="flex size-9 items-center justify-center rounded-xl bg-[color:var(--dashboard-button)] text-[color:var(--dashboard-button-text)] shadow-[0_10px_30px_-20px_rgba(15,23,42,0.28)]">
-                      <CommandIcon className="size-4" />
-                    </div>
-                    <div className="grid min-w-0 flex-1 leading-tight">
-                      <span className="truncate text-sm font-semibold tracking-tight">
-                        Active Dashboard
-                      </span>
-                      <span className="truncate text-[11px] text-[color:var(--dashboard-text-soft)]">
-                        {activePage} · {activeWorkspaceInfo.title}
-                      </span>
-                    </div>
-                    <ChevronDownIcon className="size-4 text-[color:var(--dashboard-text-soft)]" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-72">
-                    <DropdownMenuLabel>Switch Workspace</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {workspaceOptions.map((workspace) => (
-                      <DropdownMenuItem
-                        key={workspace.id}
-                        onClick={() => setActiveWorkspace(workspace.id)}
-                      >
-                        <div className="grid leading-tight">
-                          <span className="text-sm font-medium">
-                            {workspace.title}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {workspace.description}
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* //logo goes here */}
+                <CommandIcon className="size-5 text-[color:var(--dashboard-text-muted)]" />
               </div>
 
               <nav
@@ -159,7 +119,7 @@ export function DashboardNav({ children }: DashboardNavProps) {
                         }
                       }}
                       className={cn(
-                        "relative flex size-9 shrink-0 items-center justify-center rounded-full border transition duration-200",
+                        "relative flex size-8 shrink-0 items-center justify-center rounded-full border transition duration-200",
                         active
                           ? "border-accent border-2 bg-[color:var(--dashboard-button)] text-[color:var(--dashboard-button-text)] shadow-[0_12px_24px_-18px_rgba(15,23,42,0.4)]"
                           : "border-[color:var(--dashboard-border)] bg-transparent text-[color:var(--dashboard-text-muted)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]",
@@ -179,15 +139,14 @@ export function DashboardNav({ children }: DashboardNavProps) {
 
               <div className="flex flex-col gap-3 lg:items-end">
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <ThemeToggleButton />
+                  <ThemeToggleButton className="size-8" />
 
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
                         <Button
-                          size="icon-sm"
                           variant="ghost"
-                          className="relative rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] text-[color:var(--dashboard-text-muted)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
+                          className="size-8 relative rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] text-[color:var(--dashboard-text-muted)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
                         />
                       }
                     >
@@ -241,23 +200,19 @@ export function DashboardNav({ children }: DashboardNavProps) {
                       render={
                         <Button
                           variant="ghost"
-                          className="h-auto rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-1.5 py-1 text-[color:var(--dashboard-text)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
+                          className="h-8 rounded-full border border-[color:var(--dashboard-border)] bg-[color:var(--dashboard-panel-soft)] px-1.5 py-1 text-[color:var(--dashboard-text)] hover:bg-[color:var(--dashboard-hover)] hover:text-[color:var(--dashboard-text)]"
                         />
                       }
                     >
-                      <Avatar size="lg" className="ring-2 ring-white/10">
-                        <AvatarFallback className="bg-[color:var(--dashboard-hover)] text-[color:var(--dashboard-text)]">
-                          {userInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="hidden min-w-0 text-left sm:grid">
+                      {userInitials}
+                      {/* <div className="hidden min-w-0 text-left sm:grid p-x-2">
                         <span className="truncate text-xs font-medium">
                           {user.name || "Operator"}
                         </span>
                         <span className="truncate text-[11px] text-[color:var(--dashboard-text-soft)]">
                           {user.email || "No email"}
                         </span>
-                      </div>
+                      </div> */}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-64">
                       <DropdownMenuLabel>
