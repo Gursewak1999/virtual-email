@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import * as sanitizeHtml from "sanitize-html";
+import sanitizeHtml from "sanitize-html";
 
 import { useDashboardState } from "@/components/dashboard/dashboard-state-provider";
 import {
