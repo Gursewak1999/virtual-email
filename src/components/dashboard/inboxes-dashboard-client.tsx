@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import * as sanitizeHtml from "sanitize-html";
+
 import { useDashboardState } from "@/components/dashboard/dashboard-state-provider";
 import {
   formatBytes,
@@ -57,6 +59,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { buildSnippet } from "@/lib/email-helpers";
+import { th } from "date-fns/locale";
+import React, { useRef } from "react";
+import { EmailThread } from "../EmailThread";
 
 const INBOX_AVATAR_TONES = [
   "bg-violet-500/85 text-white",
@@ -216,6 +221,99 @@ export function InboxesDashboardClient() {
     { label: "Archived", count: 0, icon: ArchiveIcon },
   ];
   const router = useRouter();
+
+  const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
+
+  const processHtml = (html?: string) => {
+    if (!html) return null;
+
+    const clean = sanitizeHtml(html, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "style"]),
+      allowedAttributes: {
+        "*": ["style"],
+        a: ["href", "target"],
+        img: ["src", "alt", "width", "height"],
+      },
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <style>
+            body {
+              margin: 0;
+              padding: 12px;
+              font-family: Arial, sans-serif;
+              background: white;
+              color: black;
+              word-break: break-word;
+            }
+
+            img { max-width: 100%; height: auto; }
+            table { max-width: 100% !important; }
+          </style>
+        </head>
+        <body>${clean}</body>
+      </html>
+    `;
+  };
+
+  const handleLoad = (id: string) => {
+    const iframe = iframeRefs.current[id];
+    if (!iframe) return;
+
+    try {
+      const doc = iframe.contentWindow?.document;
+      if (!doc) return;
+
+      const resize = () => {
+        iframe.style.height = doc.body.scrollHeight + "px";
+        iframe.style.maxWidth = "600px";
+      };
+
+      resize();
+      setTimeout(resize, 300);
+      setTimeout(resize, 1000);
+
+      const observer = new ResizeObserver(resize);
+      observer.observe(doc.body);
+    } catch (err) {
+      console.error("Iframe access blocked:", err);
+    }
+  };
+
+  const renderEmail = (email: (typeof threadEmails)[number]) => {
+    const html = processHtml(email.htmlBody ?? "");
+
+    return (
+      <div key={email.id} style={{ marginBottom: "24px" }}>
+        {html ? (
+          <iframe
+            ref={(el) => {
+              iframeRefs.current[email.id] = el;
+            }}
+            sandbox="allow-same-origin"
+            srcDoc={html}
+            onLoad={() => handleLoad(email.id)}
+            style={{
+              width: "100%",
+              border: "none",
+              height: "0px",
+              display: "block",
+              background: "white",
+            }}
+          />
+        ) : (
+          <div style={{ whiteSpace: "pre-wrap", padding: "12px" }}>
+            {email.textBody || "No content"}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     // <SidebarProvider
@@ -782,7 +880,11 @@ export function InboxesDashboardClient() {
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {threadEmails.map((threadEmail) => {
+                        <EmailThread
+                          currentUserEmail={user.email || ""}
+                          emails={threadEmails}
+                        />
+                        {/* {threadEmails.map((threadEmail) => {
                           const isSentMessage = threadEmail.kind === "sent";
                           const canReplyToThis = threadEmail.kind === "inbound";
                           const sender = splitAddress(
@@ -907,7 +1009,7 @@ export function InboxesDashboardClient() {
                                       : "text-[color:var(--dashboard-text-muted)]",
                                   )}
                                 >
-                                  {getChatMessageBody(threadEmail)}
+                                  {renderEmail(threadEmail)}
                                 </pre>
 
                                 {threadEmail.attachments.length > 0 ? (
@@ -968,7 +1070,7 @@ export function InboxesDashboardClient() {
                               </article>
                             </div>
                           );
-                        })}
+                        })} */}
                       </div>
                     )}
                   </>
