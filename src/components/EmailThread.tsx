@@ -44,12 +44,15 @@ function sanitizeHtml(html: string) {
 
     // Strip dangerous stuff
     exclusiveFilter: (frame) => {
-      return (
+      if (
         frame.tag === "script" ||
         frame.tag === "style" ||
         frame.attribs?.onerror ||
         frame.attribs?.onclick
-      );
+      ) {
+        return true;
+      }
+      return false;
     },
   });
 }
