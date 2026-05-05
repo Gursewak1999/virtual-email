@@ -309,8 +309,8 @@ export function AuthCard() {
               <div className="space-y-1">
                 <p className="text-sm font-semibold">Reset account</p>
                 <p className="text-xs leading-5 text-muted-foreground">
-                  If you cannot use a passkey, recover account access with one of
-                  your single-use recovery codes.
+                  If you cannot use a passkey, recover account access with one
+                  of your single-use recovery codes.
                 </p>
               </div>
 
