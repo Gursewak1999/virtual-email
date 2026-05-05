@@ -23,6 +23,7 @@ import {
   LogOutIcon,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { clearUnlockedPrivateKey } from "@/lib/e2ee";
 
 export function NavUser({
   user,
@@ -99,7 +100,12 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/auth" })}>
+            <DropdownMenuItem
+              onClick={() => {
+                clearUnlockedPrivateKey();
+                void signOut({ callbackUrl: "/auth" });
+              }}
+            >
               <LogOutIcon />
               Log out
             </DropdownMenuItem>

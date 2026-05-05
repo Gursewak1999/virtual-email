@@ -10,7 +10,12 @@ model User {
   id                       String                     @id @default(cuid())
   name                     String?
   email                    String                     @unique
-  passwordHash             String
+  passwordHash             String?
+  encryptionPublicKey      String?
+  encryptedPrivateKey      String?
+  encryptedPrivateKeyIv     String?
+  encryptedPrivateKeySalt   String?
+  encryptedPrivateKeyRounds Int?
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
 
@@ -21,8 +26,55 @@ model User {
   caseProfiles             IrccCaseProfile[]
   consultationHostProfile  ConsultationHostProfile?
   hostedConsultations      Consultation[]            @relation("ConsultationHost")
+  passkeyCredentials       PasskeyCredential[]
+  recoveryCodes            RecoveryCode[]
+  vaultRecords             VaultRecord[]
 
   @@index([email])
+}
+
+model PasskeyCredential {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId     String   @unique @map("credential_id")
+  publicKey        String   @map("public_key")
+  counter          Int      @default(0)
+  transports       String[] @default([])
+  backedUp         Boolean  @default(false)
+  lastUsedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("credentials")
+  @@index([userId])
+}
+
+model RecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("recovery_codes")
+  @@index([userId, usedAt])
+}
+
+model VaultRecord {
+  id                 String   @id @default(cuid())
+  userId             String   @map("user_id")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  titleHint          String?  @map("title_hint")
+  encryptedPayload   String   @map("encrypted_payload")
+  encryptedPayloadIv String   @map("encrypted_payload_iv")
+  wrappedKey         String   @map("wrapped_key")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("vault_records")
+  @@index([userId, createdAt])
 }
 
 enum ConsultationStatus {

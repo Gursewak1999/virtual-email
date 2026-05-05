@@ -13,6 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 
 import { useDashboardState } from "@/components/dashboard/dashboard-state-provider";
+import { clearUnlockedPrivateKey } from "@/lib/e2ee";
 import {
   navTabs,
   workspaceOptions,
@@ -238,7 +239,10 @@ export function DashboardNav({ children }: DashboardNavProps) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => signOut({ callbackUrl: "/auth" })}
+                        onClick={() => {
+                          clearUnlockedPrivateKey();
+                          void signOut({ callbackUrl: "/auth" });
+                        }}
                       >
                         <LogOutIcon />
                         Sign Out
