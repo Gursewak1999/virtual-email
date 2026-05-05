@@ -3,7 +3,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
+import {
+  startAuthentication,
+  startRegistration,
+} from "@simplewebauthn/browser";
 
 import {
   encryptPrivateKey,
@@ -45,6 +48,7 @@ export function AuthCard() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
+  const [resetAccountOpen, setResetAccountOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registrationSuccess, setRegistrationSuccess] =
@@ -69,7 +73,9 @@ export function AuthCard() {
       throw new Error(beginPayload?.error ?? "Unable to start passkey login");
     }
 
-    const authenticationResponse = await startAuthentication(beginPayload.options);
+    const authenticationResponse = await startAuthentication(
+      beginPayload.options,
+    );
 
     const result = await signIn("credentials", {
       email,
@@ -87,6 +93,10 @@ export function AuthCard() {
   }
 
   async function handleRecoveryLogin(): Promise<void> {
+    if (!recoveryCode.trim()) {
+      throw new Error("Enter a recovery code to reset the account");
+    }
+
     const result = await signIn("credentials", {
       email,
       recoveryCode,
@@ -162,7 +172,9 @@ export function AuthCard() {
       },
     );
 
-    const completePayload = (await completeResponse.json().catch(() => null)) as {
+    const completePayload = (await completeResponse
+      .json()
+      .catch(() => null)) as {
       ok?: boolean;
       error?: string;
       recoveryCodes?: string[];
@@ -194,27 +206,20 @@ export function AuthCard() {
       return;
     }
 
-    if (mode === "login" && !recoveryCode.trim()) {
-      // Passkey login does not require a recovery code, but empty login should
-      // fall through to passkey instead of submitting an unusable code.
-    }
-
     setBusy(true);
     setError(null);
 
     try {
       if (mode === "login") {
-        if (recoveryCode.trim()) {
-          await handleRecoveryLogin();
-        } else {
-          await handlePasskeyLogin();
-        }
+        await handlePasskeyLogin();
       } else {
         await handleSignup();
       }
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error ? caughtError.message : "Authentication failed",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Authentication failed",
       );
     } finally {
       setBusy(false);
@@ -300,15 +305,57 @@ export function AuthCard() {
           </div>
 
           {mode === "login" ? (
-            <div className="space-y-2">
-              <Label htmlFor="recoveryCode">Recovery Code</Label>
-              <Input
-                id="recoveryCode"
-                autoComplete="one-time-code"
-                value={recoveryCode}
-                onChange={(event) => setRecoveryCode(event.target.value)}
-                placeholder="Optional fallback code"
-              />
+            <div className="space-y-3 rounded-2xl border bg-muted/30 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Reset account</p>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  If you cannot use a passkey, recover account access with one of
+                  your single-use recovery codes.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setResetAccountOpen((value) => !value)}
+              >
+                {resetAccountOpen ? "Hide Recovery Code" : "Use Recovery Code"}
+              </Button>
+
+              {resetAccountOpen ? (
+                <div className="space-y-2">
+                  <Label htmlFor="recoveryCode">Recovery Code</Label>
+                  <Input
+                    id="recoveryCode"
+                    autoComplete="one-time-code"
+                    value={recoveryCode}
+                    onChange={(event) => setRecoveryCode(event.target.value)}
+                    placeholder="Enter a single-use recovery code"
+                  />
+                  <Button
+                    type="button"
+                    className="w-full"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => {
+                      setBusy(true);
+                      setError(null);
+                      void handleRecoveryLogin()
+                        .catch((caughtError) => {
+                          setError(
+                            caughtError instanceof Error
+                              ? caughtError.message
+                              : "Recovery code sign-in failed",
+                          );
+                        })
+                        .finally(() => setBusy(false));
+                    }}
+                  >
+                    Reset Account With Recovery Code
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -324,9 +371,7 @@ export function AuthCard() {
                 ? "Signing In..."
                 : "Creating Account..."
               : mode === "login"
-                ? recoveryCode.trim()
-                  ? "Use Recovery Code"
-                  : "Use Passkey"
+                ? "Continue with Passkey"
                 : "Create Account"}
           </Button>
         </form>
@@ -338,9 +383,9 @@ export function AuthCard() {
                 Save this immediately
               </p>
               <p className="mt-2 text-sm leading-6">
-                Your passkey is registered. Store the master recovery key below in a
-                safe offline location. It is required to decrypt the private key on a
-                new device.
+                Your passkey is registered. Store the master recovery key below
+                in a safe offline location. It is required to decrypt the
+                private key on a new device.
               </p>
             </div>
 

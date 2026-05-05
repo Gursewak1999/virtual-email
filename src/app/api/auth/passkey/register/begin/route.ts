@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { buildRegistrationOptions, getChallengeCookieOptions } from "@/lib/passkey-auth";
+import {
+  buildRegistrationOptions,
+  getChallengeCookieOptions,
+} from "@/lib/passkey-auth";
 
 const schema = z.object({
   userId: z.string().min(1),
@@ -15,7 +18,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid request" },
+      {
+        ok: false,
+        error: parsed.error.issues[0]?.message ?? "Invalid request",
+      },
       { status: 400 },
     );
   }

@@ -85,7 +85,10 @@ export async function buildRegistrationOptions(
   });
 }
 
-export async function buildAuthenticationOptions(request: Request, email: string) {
+export async function buildAuthenticationOptions(
+  request: Request,
+  email: string,
+) {
   const context = getPasskeyContext(request);
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
@@ -233,7 +236,9 @@ export async function verifyPasskeyAuthentication(
     expectedRPID: context.rpId,
     credential: {
       id: credential.credentialId,
-      publicKey: decodeBase64Url(credential.publicKey) as Uint8Array<ArrayBuffer>,
+      publicKey: decodeBase64Url(
+        credential.publicKey,
+      ) as Uint8Array<ArrayBuffer>,
       counter: credential.counter,
       transports: credential.transports as AuthenticatorTransportFuture[],
     },
@@ -317,7 +322,9 @@ export async function verifyRecoveryCode(
 
 async function createRecoveryCodes(userId: string): Promise<string[]> {
   const recoveryCodes = Array.from({ length: 5 }, () => generateRecoveryCode());
-  const hashedCodes = await Promise.all(recoveryCodes.map((code) => hash(code, 12)));
+  const hashedCodes = await Promise.all(
+    recoveryCodes.map((code) => hash(code, 12)),
+  );
 
   await prisma.recoveryCode.createMany({
     data: hashedCodes.map((codeHash) => ({

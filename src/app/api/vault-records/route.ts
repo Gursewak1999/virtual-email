@@ -14,7 +14,10 @@ const createVaultRecordSchema = z.object({
 export async function GET(): Promise<NextResponse> {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const records = await prisma.vaultRecord.findMany({
@@ -37,7 +40,10 @@ export async function GET(): Promise<NextResponse> {
 export async function POST(request: Request): Promise<NextResponse> {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   if (!sessionUser.encryptionPublicKey) {

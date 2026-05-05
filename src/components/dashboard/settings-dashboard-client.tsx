@@ -147,7 +147,9 @@ export function SettingsDashboardClient() {
     );
 
     storeUnlockedPrivateKey(privateKeyJwk);
-    setVaultStatus("Vault unlocked. The private key is stored in sessionStorage.");
+    setVaultStatus(
+      "Vault unlocked. The private key is stored in sessionStorage.",
+    );
     setMasterRecoveryKey("");
     await loadVaultRecords(privateKeyJwk);
   }
@@ -194,7 +196,11 @@ export function SettingsDashboardClient() {
     setVaultTitle("");
     setVaultBody("");
     setEditingRecordId(null);
-    setVaultStatus(editingRecordId ? "Encrypted record updated." : "Encrypted record created.");
+    setVaultStatus(
+      editingRecordId
+        ? "Encrypted record updated."
+        : "Encrypted record created.",
+    );
     await loadVaultRecords(unlockedPrivateKey);
   }
 
@@ -276,10 +282,7 @@ export function SettingsDashboardClient() {
             >
               Manage Inboxes
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void handleSignOut()}
-            >
+            <Button variant="destructive" onClick={() => void handleSignOut()}>
               <LogOutIcon />
               Sign Out
             </Button>
@@ -290,13 +293,17 @@ export function SettingsDashboardClient() {
           <CardHeader>
             <CardTitle>Encrypted Vault</CardTitle>
             <CardDescription>
-              Unlock the browser-local private key with your master recovery key.
+              Unlock the browser-local private key with your master recovery
+              key.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2 lg:grid-cols-[1fr_auto]">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="masterRecoveryKey">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="masterRecoveryKey"
+                >
                   Master Recovery Key
                 </label>
                 <input
@@ -322,8 +329,9 @@ export function SettingsDashboardClient() {
             </div>
 
             <p className="text-xs leading-5 text-muted-foreground">
-              Recovery codes restore account access only. The master recovery key is
-              required to recover encrypted data if all synced passkey devices are lost.
+              Recovery codes restore account access only. The master recovery
+              key is required to recover encrypted data if all synced passkey
+              devices are lost.
             </p>
           </CardContent>
         </Card>
@@ -332,8 +340,8 @@ export function SettingsDashboardClient() {
           <CardHeader>
             <CardTitle>Encrypted Records</CardTitle>
             <CardDescription>
-              Create, edit, and delete records that are encrypted server-side and
-              decrypted locally after unlocking the vault.
+              Create, edit, and delete records that are encrypted server-side
+              and decrypted locally after unlocking the vault.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -366,7 +374,10 @@ export function SettingsDashboardClient() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => void handleSaveVaultRecord()}>
+              <Button
+                type="button"
+                onClick={() => void handleSaveVaultRecord()}
+              >
                 {editingRecordId ? "Update Record" : "Create Record"}
               </Button>
               <Button
@@ -422,7 +433,9 @@ export function SettingsDashboardClient() {
                         <Button
                           type="button"
                           variant="destructive"
-                          onClick={() => void handleDeleteVaultRecord(record.id)}
+                          onClick={() =>
+                            void handleDeleteVaultRecord(record.id)
+                          }
                         >
                           Delete
                         </Button>

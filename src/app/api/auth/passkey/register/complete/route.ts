@@ -24,7 +24,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid request" },
+      {
+        ok: false,
+        error: parsed.error.issues[0]?.message ?? "Invalid request",
+      },
       { status: 400 },
     );
   }

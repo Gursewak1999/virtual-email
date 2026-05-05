@@ -82,7 +82,9 @@ export async function generateUserEncryptionKeyPair(): Promise<CryptoKeyPair> {
   );
 }
 
-export async function exportPublicKeyJwk(publicKey: CryptoKey): Promise<string> {
+export async function exportPublicKeyJwk(
+  publicKey: CryptoKey,
+): Promise<string> {
   return JSON.stringify(await getCrypto().subtle.exportKey("jwk", publicKey));
 }
 

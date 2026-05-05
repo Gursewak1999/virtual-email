@@ -81,7 +81,9 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const expectedChallenge = parseChallengeCookie(req.headers?.cookie ?? "");
+        const expectedChallenge = parseChallengeCookie(
+          req.headers?.cookie ?? "",
+        );
         if (!expectedChallenge) {
           return null;
         }

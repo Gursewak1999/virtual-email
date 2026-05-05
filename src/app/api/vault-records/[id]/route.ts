@@ -6,12 +6,14 @@ import { encryptDataForUser } from "@/lib/e2ee";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session-user";
 
-const updateVaultRecordSchema = z.object({
-  title: z.string().trim().min(1).max(120).optional(),
-  body: z.string().trim().min(1).max(10000).optional(),
-}).refine((data) => data.title !== undefined || data.body !== undefined, {
-  message: "At least one field is required",
-});
+const updateVaultRecordSchema = z
+  .object({
+    title: z.string().trim().min(1).max(120).optional(),
+    body: z.string().trim().min(1).max(10000).optional(),
+  })
+  .refine((data) => data.title !== undefined || data.body !== undefined, {
+    message: "At least one field is required",
+  });
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,7 +25,10 @@ export async function PATCH(
 ): Promise<NextResponse> {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   if (!sessionUser.encryptionPublicKey) {
@@ -42,7 +47,10 @@ export async function PATCH(
   });
 
   if (!existingRecord) {
-    return NextResponse.json({ ok: false, error: "Record not found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "Record not found" },
+      { status: 404 },
+    );
   }
 
   const body = await request.json().catch(() => null);
@@ -94,7 +102,10 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const { id } = await params;
@@ -104,7 +115,10 @@ export async function DELETE(
   });
 
   if (!record) {
-    return NextResponse.json({ ok: false, error: "Record not found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "Record not found" },
+      { status: 404 },
+    );
   }
 
   await prisma.vaultRecord.delete({ where: { id: record.id } });
@@ -118,7 +132,10 @@ export async function GET(
 ): Promise<NextResponse> {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const { id } = await params;
@@ -136,7 +153,10 @@ export async function GET(
   });
 
   if (!record) {
-    return NextResponse.json({ ok: false, error: "Record not found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "Record not found" },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({ ok: true, record });
